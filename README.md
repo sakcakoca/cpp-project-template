@@ -126,6 +126,10 @@ cmake --build --preset win-msys2-clang-debug
 ctest --preset win-msys2-clang-test
 
 # ── Windows MSVC (run from Developer Command Prompt) ────────────────────
+# First enable vs build tools
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+
+#Then compile
 cmake --preset win-msvc-debug
 cmake --build --preset win-msvc-debug
 ctest --preset win-msvc-test
@@ -268,16 +272,10 @@ and include paths. Three name forms are derived:
 | `Calculator` | `Calculator` | `calculator` | `CALCULATOR` |
 | `my-widget` | `MyWidget` | `my_widget` | `MYWIDGET` |
 
-Use `--std` to set the C++ standard version (default is 23):
-
-```bash
-python3 setup_project.py Calculator --std 20
-```
-
 Use `--dry-run` to preview changes without modifying anything:
 
 ```bash
-python3 setup_project.py --dry-run --std 20 Calculator
+python3 setup_project.py --dry-run Calculator
 ```
 
 ### Manual setup (6 steps)

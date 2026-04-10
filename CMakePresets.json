@@ -153,7 +153,8 @@
       },
       "cacheVariables": {
         "CMAKE_C_COMPILER":   "cl",
-        "CMAKE_CXX_COMPILER": "cl"
+        "CMAKE_CXX_COMPILER": "cl",
+        "CMAKE_LINKER":       "link"
       },
       "environment": {
         "CONAN_HOST_PROFILE": "${sourceDir}/conan_profiles/win-msvc"
