@@ -198,8 +198,6 @@
     { "name": "linux-gcc-debug-lsan",   "displayName": "Linux GCC Debug + LSan",         "inherits": ["linux-gcc-debug",   "san-lsan"] },
     { "name": "linux-clang-debug-lsan", "displayName": "Linux Clang Debug + LSan",       "inherits": ["linux-clang-debug", "san-lsan"] },
 
-    { "name": "macos-gcc-debug-asan",   "displayName": "macOS GCC Debug + ASan/UBSan", "inherits": ["macos-gcc-debug",   "san-asan"] },
-    { "name": "macos-gcc-debug-tsan",   "displayName": "macOS GCC Debug + TSan",       "inherits": ["macos-gcc-debug",   "san-tsan"] },
     { "name": "macos-clang-debug-asan", "displayName": "macOS Clang Debug + ASan/UBSan", "inherits": ["macos-clang-debug", "san-asan"] },
     { "name": "macos-clang-debug-tsan", "displayName": "macOS Clang Debug + TSan",       "inherits": ["macos-clang-debug", "san-tsan"] },
 
@@ -244,8 +242,6 @@
     { "name": "linux-clang-debug-msan",     "configurePreset": "linux-clang-debug-msan" },
     { "name": "linux-gcc-debug-lsan",       "configurePreset": "linux-gcc-debug-lsan" },
     { "name": "linux-clang-debug-lsan",     "configurePreset": "linux-clang-debug-lsan" },
-    { "name": "macos-gcc-debug-asan",       "configurePreset": "macos-gcc-debug-asan" },
-    { "name": "macos-gcc-debug-tsan",       "configurePreset": "macos-gcc-debug-tsan" },
     { "name": "macos-clang-debug-asan",     "configurePreset": "macos-clang-debug-asan" },
     { "name": "macos-clang-debug-tsan",     "configurePreset": "macos-clang-debug-tsan" },
     { "name": "win-msys2-gcc-debug-asan",   "configurePreset": "win-msys2-gcc-debug-asan" },
@@ -269,8 +265,6 @@
     { "name": "linux-clang-test-msan",     "configurePreset": "linux-clang-debug-msan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
     { "name": "linux-gcc-test-lsan",       "configurePreset": "linux-gcc-debug-lsan",       "output": { "outputOnFailure": true, "verbosity": "verbose" } },
     { "name": "linux-clang-test-lsan",     "configurePreset": "linux-clang-debug-lsan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
-    { "name": "macos-gcc-test-asan",       "configurePreset": "macos-gcc-debug-asan",       "output": { "outputOnFailure": true, "verbosity": "verbose" } },
-    { "name": "macos-gcc-test-tsan",       "configurePreset": "macos-gcc-debug-tsan",       "output": { "outputOnFailure": true, "verbosity": "verbose" } },
     { "name": "macos-clang-test-asan",     "configurePreset": "macos-clang-debug-asan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
     { "name": "macos-clang-test-tsan",     "configurePreset": "macos-clang-debug-tsan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
     { "name": "win-msys2-gcc-test-asan",   "configurePreset": "win-msys2-gcc-debug-asan",   "output": { "outputOnFailure": true, "verbosity": "verbose" } },

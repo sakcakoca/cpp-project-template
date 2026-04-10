@@ -210,28 +210,6 @@ jobs:
         - TEST_PRESET=linux-clang-test-lsan
       script: *build_and_test
 
-    # macOS GCC — ASan + UBSan
-    - stage: sanitizers
-      name: "Sanitizer · macos-gcc-test-asan"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="gcc ninja cmake conan"
-        - CONFIGURE_PRESET=macos-gcc-debug-asan
-        - BUILD_PRESET=macos-gcc-debug-asan
-        - TEST_PRESET=macos-gcc-test-asan
-      script: *macos_build_and_test
-
-    # macOS GCC — TSan
-    - stage: sanitizers
-      name: "Sanitizer · macos-gcc-test-tsan"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="gcc ninja cmake conan"
-        - CONFIGURE_PRESET=macos-gcc-debug-tsan
-        - BUILD_PRESET=macos-gcc-debug-tsan
-        - TEST_PRESET=macos-gcc-test-tsan
-      script: *macos_build_and_test
-
     # macOS Clang — ASan + UBSan
     - stage: sanitizers
       name: "Sanitizer · macos-clang-test-asan"

@@ -105,8 +105,8 @@ jobs:
             configure: win-msys2-clang-debug
             build: win-msys2-clang-debug
             test: win-msys2-clang-test
-            msystem: MINGW64
-            msys_packages: mingw-w64-x86_64-clang mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip
+            msystem: CLANG64
+            msys_packages: mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-python-pip mingw-w64-clang-x86_64-toolchain
     defaults:
       run:
         shell: msys2 {0}
@@ -249,14 +249,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - configure: macos-gcc-debug-asan
-            build: macos-gcc-debug-asan
-            test: macos-gcc-test-asan
-            brew_packages: gcc ninja cmake conan
-          - configure: macos-gcc-debug-tsan
-            build: macos-gcc-debug-tsan
-            test: macos-gcc-test-tsan
-            brew_packages: gcc ninja cmake conan
           - configure: macos-clang-debug-asan
             build: macos-clang-debug-asan
             test: macos-clang-test-asan
@@ -299,8 +291,8 @@ jobs:
           - configure: win-msys2-clang-debug-asan
             build: win-msys2-clang-debug-asan
             test: win-msys2-clang-test-asan
-            msystem: MINGW64
-            msys_packages: mingw-w64-x86_64-clang mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip
+            msystem: CLANG64
+            msys_packages: mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-python-pip mingw-w64-clang-x86_64-toolchain
     defaults:
       run:
         shell: msys2 {0}

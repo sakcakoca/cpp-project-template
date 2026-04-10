@@ -32,6 +32,39 @@ else()
       "[Conan] 'conan' not found on PATH. Install Conan 2: pip install conan")
   endif()
 
+  # ── Detect enabled sanitizers and construct flags for Conan ─────────────
+  set(_SANITIZER_FLAGS "")
+  set(_SANITIZER_LIST "")
+  if(ENABLE_SANITIZER_ADDRESS)
+    list(APPEND _SANITIZER_LIST "address")
+  endif()
+  if(ENABLE_SANITIZER_UNDEFINED)
+    list(APPEND _SANITIZER_LIST "undefined")
+  endif()
+  if(ENABLE_SANITIZER_LEAK)
+    list(APPEND _SANITIZER_LIST "leak")
+  endif()
+  if(ENABLE_SANITIZER_THREAD)
+    list(APPEND _SANITIZER_LIST "thread")
+  endif()
+  if(ENABLE_SANITIZER_MEMORY)
+    list(APPEND _SANITIZER_LIST "memory")
+  endif()
+
+  if(_SANITIZER_LIST)
+    list(JOIN _SANITIZER_LIST "," _SANITIZER_JOINED)
+    set(_SANITIZER_FLAGS "-fsanitize=${_SANITIZER_JOINED} -fno-omit-frame-pointer")
+    set(_CONAN_SAN_CONF
+      "--conf=tools.build:cflags+=[\"${_SANITIZER_FLAGS}\"]"
+      "--conf=tools.build:cxxflags+=[\"${_SANITIZER_FLAGS}\"]"
+      "--conf=tools.build:exelinkflags+=[\"-fsanitize=${_SANITIZER_JOINED}\"]"
+      "--conf=tools.build:sharedlinkflags+=[\"-fsanitize=${_SANITIZER_JOINED}\"]"
+    )
+    message(STATUS "[Conan] Sanitizer flags detected: ${_SANITIZER_FLAGS}")
+  else()
+    set(_CONAN_SAN_CONF "")
+  endif()
+
   execute_process(
     COMMAND "${_CONAN_EXE}" --version
     OUTPUT_VARIABLE _CONAN_VER_OUT
@@ -92,6 +125,7 @@ else()
       "-pr:h" "${_HOST_PROFILE}"
       "-pr:b" "${_BUILD_PROFILE}"
       "-s:h"  "build_type=${CMAKE_BUILD_TYPE}"
+      ${_CONAN_SAN_CONF}
     RESULT_VARIABLE _CONAN_RC
   )
   if(NOT _CONAN_RC EQUAL 0)

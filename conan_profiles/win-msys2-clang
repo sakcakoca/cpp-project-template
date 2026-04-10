@@ -8,7 +8,7 @@ arch=x86_64
 compiler=clang
 compiler.version=22
 compiler.cppstd=23
-compiler.libcxx=libstdc++
+compiler.libcxx=libc++
 build_type=Release
 
 [conf]
