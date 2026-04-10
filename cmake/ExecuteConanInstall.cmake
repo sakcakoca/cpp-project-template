@@ -34,7 +34,13 @@ else()
 
   # ── Detect enabled sanitizers and construct flags for Conan ─────────────
   set(_CONAN_SAN_CONF "")
-  if(MSVC)
+  set(_IS_MSVC OFF)
+
+  if(MSVC OR (CMAKE_C_COMPILER MATCHES "cl(\\.exe)?$") OR (CMAKE_CXX_COMPILER MATCHES "cl(\\.exe)?$"))
+    set(_IS_MSVC ON)
+  endif()
+
+  if(_IS_MSVC)
     # Only AddressSanitizer is supported on MSVC, and only with /fsanitize=address
     if(ENABLE_SANITIZER_ADDRESS)
       set(_CONAN_SAN_CONF
@@ -105,19 +111,6 @@ else()
   if(NOT _CONAN_PROF_RC EQUAL 0)
     message(STATUS "[Conan] Default profile missing — running 'conan profile detect'")
     execute_process(COMMAND "${_CONAN_EXE}" profile detect --force)
-  endif()
-
-  # ── Resolve profiles from environment ──────────────────────────────────
-  if(DEFINED ENV{CONAN_HOST_PROFILE})
-    set(_HOST_PROFILE "$ENV{CONAN_HOST_PROFILE}")
-  else()
-    set(_HOST_PROFILE "default")
-  endif()
-
-  if(DEFINED ENV{CONAN_BUILD_PROFILE})
-    set(_BUILD_PROFILE "$ENV{CONAN_BUILD_PROFILE}")
-  else()
-    set(_BUILD_PROFILE "default")
   endif()
 
   # ── Build type ─────────────────────────────────────────────────────────

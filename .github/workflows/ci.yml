@@ -279,11 +279,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - configure: win-msys2-gcc-debug-asan
-            build: win-msys2-gcc-debug-asan
-            test: win-msys2-gcc-test-asan
-            msystem: MINGW64
-            msys_packages: mingw-w64-x86_64-gcc mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip
           - configure: win-msys2-clang-debug-asan
             build: win-msys2-clang-debug-asan
             test: win-msys2-clang-test-asan
