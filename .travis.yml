@@ -1,0 +1,255 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Travis CI — Linux + macOS build & test matrix
+#
+# Windows is NOT supported by Travis — see appveyor.yml for Windows CI.
+#
+# Stages:
+#   1. test          — plain tests (no sanitizers)
+#   2. valgrind      — plain debug builds + ctest memcheck (Linux only)
+#   3. sanitizers    — sanitizer-enabled tests
+# ─────────────────────────────────────────────────────────────────────────────
+language: cpp
+
+# Only build pushes to these branches and PRs targeting them
+branches:
+  only:
+    - main
+
+# Global cache for Conan packages
+cache:
+  directories:
+    - $HOME/.conan2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared install helpers (YAML anchors)
+# ─────────────────────────────────────────────────────────────────────────────
+_linux_setup: &linux_setup
+  os: linux
+  dist: noble
+  before_install:
+    - sudo apt-get update
+    - sudo apt-get install -y ninja-build ${APT_EXTRA}
+    - pip install conan
+    - conan profile detect
+
+_macos_setup: &macos_setup
+  os: osx
+  osx_image: xcode15.4
+  before_install:
+    - brew install ${BREW_PACKAGES}
+    - conan profile detect
+
+_macos_build_and_test: &macos_build_and_test
+  - cmake --preset ${CONFIGURE_PRESET} -DCMAKE_OSX_SYSROOT=$(xcrun --show-sdk-path)
+  - cmake --build --preset ${BUILD_PRESET}
+  - ctest --preset ${TEST_PRESET}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Build stages — run in order, each stage's jobs run in parallel
+# ─────────────────────────────────────────────────────────────────────────────
+stages:
+  - name: test
+  - name: valgrind
+  - name: sanitizers
+
+jobs:
+  include:
+    # ─────────────────────────────────────────────────────────────────────────
+    # Stage 1: Plain tests (no sanitizers)
+    # ─────────────────────────────────────────────────────────────────────────
+    # Linux GCC
+    - stage: test
+      name: "Test · linux-gcc"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=""
+        - CONFIGURE_PRESET=linux-gcc-debug
+        - BUILD_PRESET=linux-gcc-debug
+        - TEST_PRESET=linux-gcc-test
+      script: &build_and_test
+        - cmake --preset ${CONFIGURE_PRESET}
+        - cmake --build --preset ${BUILD_PRESET}
+        - ctest --preset ${TEST_PRESET}
+
+    # Linux Clang
+    - stage: test
+      name: "Test · linux-clang"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=clang
+        - CONFIGURE_PRESET=linux-clang-debug
+        - BUILD_PRESET=linux-clang-debug
+        - TEST_PRESET=linux-clang-test
+      script: *build_and_test
+
+    # macOS GCC
+    - stage: test
+      name: "Test · macos-gcc"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="gcc ninja cmake conan"
+        - CONFIGURE_PRESET=macos-gcc-debug
+        - BUILD_PRESET=macos-gcc-debug
+        - TEST_PRESET=macos-gcc-test
+      script: *macos_build_and_test
+
+    # macOS Clang
+    - stage: test
+      name: "Test · macos-clang"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="llvm ninja cmake conan"
+        - CONFIGURE_PRESET=macos-clang-debug
+        - BUILD_PRESET=macos-clang-debug
+        - TEST_PRESET=macos-clang-test
+      script: *macos_build_and_test
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Stage 2: Valgrind memcheck (Linux only, no sanitizers)
+    # ─────────────────────────────────────────────────────────────────────────
+    # Linux GCC + Valgrind
+    - stage: valgrind
+      name: "Valgrind · linux-gcc"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=valgrind
+        - CONFIGURE_PRESET=linux-gcc-debug
+        - BUILD_PRESET=linux-gcc-debug
+      script: &build_and_valgrind
+        - cmake --preset ${CONFIGURE_PRESET}
+        - cmake --build --preset ${BUILD_PRESET}
+        - ctest --test-dir build/${CONFIGURE_PRESET} -T memcheck --output-on-failure
+
+    # Linux Clang + Valgrind
+    - stage: valgrind
+      name: "Valgrind · linux-clang"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA="clang valgrind"
+        - CONFIGURE_PRESET=linux-clang-debug
+        - BUILD_PRESET=linux-clang-debug
+      script: *build_and_valgrind
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Stage 3: Sanitizer tests
+    # ─────────────────────────────────────────────────────────────────────────
+    # Linux GCC — ASan + UBSan
+    - stage: sanitizers
+      name: "Sanitizer · linux-gcc-test-asan"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=""
+        - CONFIGURE_PRESET=linux-gcc-debug-asan
+        - BUILD_PRESET=linux-gcc-debug-asan
+        - TEST_PRESET=linux-gcc-test-asan
+      script: *build_and_test
+
+    # Linux GCC — TSan
+    - stage: sanitizers
+      name: "Sanitizer · linux-gcc-test-tsan"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=""
+        - CONFIGURE_PRESET=linux-gcc-debug-tsan
+        - BUILD_PRESET=linux-gcc-debug-tsan
+        - TEST_PRESET=linux-gcc-test-tsan
+      script: *build_and_test
+
+    # Linux GCC — LSan
+    - stage: sanitizers
+      name: "Sanitizer · linux-gcc-test-lsan"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=""
+        - CONFIGURE_PRESET=linux-gcc-debug-lsan
+        - BUILD_PRESET=linux-gcc-debug-lsan
+        - TEST_PRESET=linux-gcc-test-lsan
+      script: *build_and_test
+
+    # Linux Clang — ASan + UBSan
+    - stage: sanitizers
+      name: "Sanitizer · linux-clang-test-asan"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=clang
+        - CONFIGURE_PRESET=linux-clang-debug-asan
+        - BUILD_PRESET=linux-clang-debug-asan
+        - TEST_PRESET=linux-clang-test-asan
+      script: *build_and_test
+
+    # Linux Clang — TSan
+    - stage: sanitizers
+      name: "Sanitizer · linux-clang-test-tsan"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=clang
+        - CONFIGURE_PRESET=linux-clang-debug-tsan
+        - BUILD_PRESET=linux-clang-debug-tsan
+        - TEST_PRESET=linux-clang-test-tsan
+      script: *build_and_test
+
+    # Linux Clang — MSan
+    - stage: sanitizers
+      name: "Sanitizer · linux-clang-test-msan"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=clang
+        - CONFIGURE_PRESET=linux-clang-debug-msan
+        - BUILD_PRESET=linux-clang-debug-msan
+        - TEST_PRESET=linux-clang-test-msan
+      script: *build_and_test
+
+    # Linux Clang — LSan
+    - stage: sanitizers
+      name: "Sanitizer · linux-clang-test-lsan"
+      <<: *linux_setup
+      env:
+        - APT_EXTRA=clang
+        - CONFIGURE_PRESET=linux-clang-debug-lsan
+        - BUILD_PRESET=linux-clang-debug-lsan
+        - TEST_PRESET=linux-clang-test-lsan
+      script: *build_and_test
+
+    # macOS GCC — ASan + UBSan
+    - stage: sanitizers
+      name: "Sanitizer · macos-gcc-test-asan"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="gcc ninja cmake conan"
+        - CONFIGURE_PRESET=macos-gcc-debug-asan
+        - BUILD_PRESET=macos-gcc-debug-asan
+        - TEST_PRESET=macos-gcc-test-asan
+      script: *macos_build_and_test
+
+    # macOS GCC — TSan
+    - stage: sanitizers
+      name: "Sanitizer · macos-gcc-test-tsan"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="gcc ninja cmake conan"
+        - CONFIGURE_PRESET=macos-gcc-debug-tsan
+        - BUILD_PRESET=macos-gcc-debug-tsan
+        - TEST_PRESET=macos-gcc-test-tsan
+      script: *macos_build_and_test
+
+    # macOS Clang — ASan + UBSan
+    - stage: sanitizers
+      name: "Sanitizer · macos-clang-test-asan"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="llvm ninja cmake conan"
+        - CONFIGURE_PRESET=macos-clang-debug-asan
+        - BUILD_PRESET=macos-clang-debug-asan
+        - TEST_PRESET=macos-clang-test-asan
+      script: *macos_build_and_test
+
+    # macOS Clang — TSan
+    - stage: sanitizers
+      name: "Sanitizer · macos-clang-test-tsan"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="llvm ninja cmake conan"
+        - CONFIGURE_PRESET=macos-clang-debug-tsan
+        - BUILD_PRESET=macos-clang-debug-tsan
+        - TEST_PRESET=macos-clang-test-tsan
+      script: *macos_build_and_test

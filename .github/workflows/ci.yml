@@ -1,0 +1,343 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# GitHub Actions CI — full cross-platform build & test matrix
+#
+# Stages:
+#   1. test          — plain tests (no sanitizers, all platforms)
+#   2. valgrind      — plain debug builds + ctest memcheck (Linux only)
+#   3. sanitizers    — sanitizer-enabled tests (platform-dependent)
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1: Plain tests (no sanitizers)
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  test-linux:
+    name: "Test · ${{ matrix.preset }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - preset: linux-gcc
+            configure: linux-gcc-debug
+            build: linux-gcc-debug
+            test: linux-gcc-test
+            packages: ""
+          - preset: linux-clang
+            configure: linux-clang-debug
+            build: linux-clang-debug
+            test: linux-clang-test
+            packages: clang
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build ${{ matrix.packages }}
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure }}
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+      - name: Test
+        run: ctest --preset ${{ matrix.test }}
+
+  test-macos:
+    name: "Test · ${{ matrix.preset }}"
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - preset: macos-gcc
+            configure: macos-gcc-debug
+            build: macos-gcc-debug
+            test: macos-gcc-test
+            brew_packages: gcc ninja cmake conan
+          - preset: macos-clang
+            configure: macos-clang-debug
+            build: macos-clang-debug
+            test: macos-clang-test
+            brew_packages: llvm ninja cmake conan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode (runner default)
+        run: |
+          sudo xcode-select -s "$(xcode-select -p)"
+          xcodebuild -version
+      - name: Install Homebrew packages
+        run: brew install ${{ matrix.brew_packages }}
+      - name: Detect Conan
+        run: |
+          conan profile detect
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure }} -DCMAKE_OSX_SYSROOT=$(xcrun --show-sdk-path)
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+      - name: Test
+        run: ctest --preset ${{ matrix.test }}
+
+  test-windows-msys2:
+    name: "Test · ${{ matrix.preset }}"
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - preset: win-msys2-gcc
+            configure: win-msys2-gcc-debug
+            build: win-msys2-gcc-debug
+            test: win-msys2-gcc-test
+            msystem: MINGW64
+            msys_packages: mingw-w64-x86_64-gcc mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip
+          - preset: win-msys2-clang
+            configure: win-msys2-clang-debug
+            build: win-msys2-clang-debug
+            test: win-msys2-clang-test
+            msystem: MINGW64
+            msys_packages: mingw-w64-x86_64-clang mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          install: ${{ matrix.msys_packages }}
+          update: true
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure }}
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+      - name: Test
+        run: ctest --preset ${{ matrix.test }}
+
+  test-windows-msvc:
+    name: "Test · win-msvc"
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ninja
+        run: choco install ninja -y
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Configure (Developer Command Prompt)
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Configure
+        run: cmake --preset win-msvc-debug
+      - name: Build
+        run: cmake --build --preset win-msvc-debug
+      - name: Test
+        run: ctest --preset win-msvc-test
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Stage 2: Valgrind memcheck (Linux only, no sanitizers)
+  # ───────────────────────────────────────────────────────────────────────────
+  valgrind:
+    name: "Valgrind · ${{ matrix.preset }}"
+    needs: test-linux
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - preset: linux-gcc
+            configure: linux-gcc-debug
+            build: linux-gcc-debug
+          - preset: linux-clang
+            configure: linux-clang-debug
+            build: linux-clang-debug
+            packages: clang
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build valgrind ${{ matrix.packages }}
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure }}
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+      - name: Valgrind memcheck
+        run: ctest --test-dir build/${{ matrix.configure }} -T memcheck --output-on-failure
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Stage 3: Sanitizer tests
+  # ───────────────────────────────────────────────────────────────────────────
+  sanitizers-linux:
+    name: "Sanitizer · ${{ matrix.test }}"
+    needs: test-linux
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # GCC sanitizers
+          - configure: linux-gcc-debug-asan
+            build: linux-gcc-debug-asan
+            test: linux-gcc-test-asan
+            packages: ""
+          - configure: linux-gcc-debug-tsan
+            build: linux-gcc-debug-tsan
+            test: linux-gcc-test-tsan
+            packages: ""
+          - configure: linux-gcc-debug-lsan
+            build: linux-gcc-debug-lsan
+            test: linux-gcc-test-lsan
+            packages: ""
+          # Clang sanitizers
+          - configure: linux-clang-debug-asan
+            build: linux-clang-debug-asan
+            test: linux-clang-test-asan
+            packages: clang
+          - configure: linux-clang-debug-tsan
+            build: linux-clang-debug-tsan
+            test: linux-clang-test-tsan
+            packages: clang
+          - configure: linux-clang-debug-msan
+            build: linux-clang-debug-msan
+            test: linux-clang-test-msan
+            packages: clang
+          - configure: linux-clang-debug-lsan
+            build: linux-clang-debug-lsan
+            test: linux-clang-test-lsan
+            packages: clang
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build ${{ matrix.packages }}
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure }}
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+      - name: Test
+        run: ctest --preset ${{ matrix.test }}
+
+  sanitizers-macos:
+    name: "Sanitizer · ${{ matrix.test }}"
+    needs: test-macos
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - configure: macos-gcc-debug-asan
+            build: macos-gcc-debug-asan
+            test: macos-gcc-test-asan
+            brew_packages: gcc ninja cmake conan
+          - configure: macos-gcc-debug-tsan
+            build: macos-gcc-debug-tsan
+            test: macos-gcc-test-tsan
+            brew_packages: gcc ninja cmake conan
+          - configure: macos-clang-debug-asan
+            build: macos-clang-debug-asan
+            test: macos-clang-test-asan
+            brew_packages: llvm ninja cmake conan
+          - configure: macos-clang-debug-tsan
+            build: macos-clang-debug-tsan
+            test: macos-clang-test-tsan
+            brew_packages: llvm ninja cmake conan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode (runner default)
+        run: |
+          sudo xcode-select -s "$(xcode-select -p)"
+          xcodebuild -version
+      - name: Install Homebrew packages
+        run: brew install ${{ matrix.brew_packages }}
+      - name: Install Conan
+        run: |
+          conan profile detect
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure }} -DCMAKE_OSX_SYSROOT=$(xcrun --show-sdk-path)
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+      - name: Test
+        run: ctest --preset ${{ matrix.test }}
+
+  sanitizers-windows-msys2:
+    name: "Sanitizer · ${{ matrix.test }}"
+    needs: test-windows-msys2
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - configure: win-msys2-gcc-debug-asan
+            build: win-msys2-gcc-debug-asan
+            test: win-msys2-gcc-test-asan
+            msystem: MINGW64
+            msys_packages: mingw-w64-x86_64-gcc mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip
+          - configure: win-msys2-clang-debug-asan
+            build: win-msys2-clang-debug-asan
+            test: win-msys2-clang-test-asan
+            msystem: MINGW64
+            msys_packages: mingw-w64-x86_64-clang mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          install: ${{ matrix.msys_packages }}
+          update: true
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure }}
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+      - name: Test
+        run: ctest --preset ${{ matrix.test }}
+
+  sanitizers-windows-msvc:
+    name: "Sanitizer · win-msvc-test-asan"
+    needs: test-windows-msvc
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ninja
+        run: choco install ninja -y
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Configure
+        run: cmake --preset win-msvc-debug-asan
+      - name: Build
+        run: cmake --build --preset win-msvc-debug-asan
+      - name: Test
+        run: ctest --preset win-msvc-test-asan

@@ -1,0 +1,17 @@
+# Conan 2 profile: macOS + Homebrew LLVM Clang
+# This uses Homebrew's LLVM Clang, NOT Apple Clang.
+# Adjust compiler.version and paths to match your installation.
+# Run "brew info llvm" and "/opt/homebrew/opt/llvm/bin/clang --version" to check.
+# For Intel Macs, change arch to x86_64 and paths to /usr/local/opt/llvm/bin/.
+
+[settings]
+os=Macos
+arch=armv8
+compiler=clang
+compiler.version=22
+compiler.cppstd=26
+compiler.libcxx=libc++
+build_type=Release
+
+[conf]
+tools.build:compiler_executables={"c": "/opt/homebrew/opt/llvm/bin/clang", "cpp": "/opt/homebrew/opt/llvm/bin/clang++"}

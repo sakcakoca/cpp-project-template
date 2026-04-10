@@ -1,0 +1,279 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+
+  "configurePresets": [
+
+    {
+      "name": "base",
+      "description": "Shared settings: Ninja generator, build dir, compile-commands, Conan env",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/${presetName}/install",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "environment": {
+        "CONAN_HOST_PROFILE": "default",
+        "CONAN_BUILD_PROFILE": "default"
+      }
+    },
+
+    { "name": "cfg-debug",          "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "cfg-release",        "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+    { "name": "cfg-relwithdebinfo", "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" } },
+
+    {
+      "name": "san-asan",
+      "description": "AddressSanitizer + UndefinedBehaviorSanitizer",
+      "hidden": true,
+      "cacheVariables": {
+        "ENABLE_SANITIZER_ADDRESS":   "ON",
+        "ENABLE_SANITIZER_UNDEFINED": "ON"
+      }
+    },
+    {
+      "name": "san-tsan",
+      "description": "ThreadSanitizer (incompatible with ASan / MSan)",
+      "hidden": true,
+      "cacheVariables": { "ENABLE_SANITIZER_THREAD": "ON" }
+    },
+    {
+      "name": "san-lsan",
+      "description": "LeakSanitizer (Linux GCC/Clang only, incompatible with TSan / MSan)",
+      "hidden": true,
+      "cacheVariables": { "ENABLE_SANITIZER_LEAK": "ON" }
+    },
+    {
+      "name": "san-msan",
+      "description": "MemorySanitizer (Clang-only, incompatible with ASan / TSan)",
+      "hidden": true,
+      "cacheVariables": { "ENABLE_SANITIZER_MEMORY": "ON" }
+    },
+
+    {
+      "name": "linux-gcc",
+      "description": "Linux — system GCC",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      },
+      "environment": {
+        "CONAN_HOST_PROFILE": "${sourceDir}/conan_profiles/linux-gcc"
+      }
+    },
+    {
+      "name": "linux-clang",
+      "description": "Linux — system Clang",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      },
+      "environment": {
+        "CONAN_HOST_PROFILE": "${sourceDir}/conan_profiles/linux-clang"
+      }
+    },
+    {
+      "name": "macos-gcc",
+      "description": "macOS — Homebrew GCC (Apple Silicon). Adjust paths for Intel Macs.",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "/opt/homebrew/bin/gcc-15",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/bin/g++-15",
+        "CMAKE_OSX_SYSROOT":  "/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk"
+      },
+      "environment": {
+        "CONAN_HOST_PROFILE": "${sourceDir}/conan_profiles/macos-gcc"
+      }
+    },
+    {
+      "name": "macos-clang",
+      "description": "macOS — Homebrew LLVM Clang (Apple Silicon). Adjust paths for Intel Macs.",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "/opt/homebrew/opt/llvm/bin/clang",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
+      },
+      "environment": {
+        "CONAN_HOST_PROFILE": "${sourceDir}/conan_profiles/macos-clang"
+      }
+    },
+    {
+      "name": "win-msys2-gcc",
+      "description": "Windows — MSYS2 GCC",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      },
+      "environment": {
+        "CONAN_HOST_PROFILE": "${sourceDir}/conan_profiles/win-msys2-gcc"
+      }
+    },
+    {
+      "name": "win-msys2-clang",
+      "description": "Windows — MSYS2 Clang",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      },
+      "environment": {
+        "CONAN_HOST_PROFILE": "${sourceDir}/conan_profiles/win-msys2-clang"
+      }
+    },
+    {
+      "name": "win-msvc",
+      "description": "Windows — MSVC (Visual Studio)",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "toolset": {
+        "value": "host=x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      },
+      "environment": {
+        "CONAN_HOST_PROFILE": "${sourceDir}/conan_profiles/win-msvc"
+      }
+    },
+
+    { "name": "linux-gcc-debug",          "displayName": "Linux GCC Debug",          "inherits": ["linux-gcc", "cfg-debug"] },
+    { "name": "linux-gcc-release",        "displayName": "Linux GCC Release",        "inherits": ["linux-gcc", "cfg-release"] },
+    { "name": "linux-gcc-relwithdebinfo", "displayName": "Linux GCC RelWithDebInfo", "inherits": ["linux-gcc", "cfg-relwithdebinfo"] },
+
+    { "name": "linux-clang-debug",          "displayName": "Linux Clang Debug",          "inherits": ["linux-clang", "cfg-debug"] },
+    { "name": "linux-clang-release",        "displayName": "Linux Clang Release",        "inherits": ["linux-clang", "cfg-release"] },
+    { "name": "linux-clang-relwithdebinfo", "displayName": "Linux Clang RelWithDebInfo", "inherits": ["linux-clang", "cfg-relwithdebinfo"] },
+
+    { "name": "macos-gcc-debug",          "displayName": "macOS GCC Debug",          "inherits": ["macos-gcc", "cfg-debug"] },
+    { "name": "macos-gcc-release",        "displayName": "macOS GCC Release",        "inherits": ["macos-gcc", "cfg-release"] },
+    { "name": "macos-gcc-relwithdebinfo", "displayName": "macOS GCC RelWithDebInfo", "inherits": ["macos-gcc", "cfg-relwithdebinfo"] },
+
+    { "name": "macos-clang-debug",          "displayName": "macOS Clang Debug",          "inherits": ["macos-clang", "cfg-debug"] },
+    { "name": "macos-clang-release",        "displayName": "macOS Clang Release",        "inherits": ["macos-clang", "cfg-release"] },
+    { "name": "macos-clang-relwithdebinfo", "displayName": "macOS Clang RelWithDebInfo", "inherits": ["macos-clang", "cfg-relwithdebinfo"] },
+
+    { "name": "win-msys2-gcc-debug",          "displayName": "Win MSYS2 GCC Debug",          "inherits": ["win-msys2-gcc", "cfg-debug"] },
+    { "name": "win-msys2-gcc-release",        "displayName": "Win MSYS2 GCC Release",        "inherits": ["win-msys2-gcc", "cfg-release"] },
+    { "name": "win-msys2-gcc-relwithdebinfo", "displayName": "Win MSYS2 GCC RelWithDebInfo", "inherits": ["win-msys2-gcc", "cfg-relwithdebinfo"] },
+
+    { "name": "win-msys2-clang-debug",          "displayName": "Win MSYS2 Clang Debug",          "inherits": ["win-msys2-clang", "cfg-debug"] },
+    { "name": "win-msys2-clang-release",        "displayName": "Win MSYS2 Clang Release",        "inherits": ["win-msys2-clang", "cfg-release"] },
+    { "name": "win-msys2-clang-relwithdebinfo", "displayName": "Win MSYS2 Clang RelWithDebInfo", "inherits": ["win-msys2-clang", "cfg-relwithdebinfo"] },
+
+    { "name": "win-msvc-debug",          "displayName": "Win MSVC Debug",          "inherits": ["win-msvc", "cfg-debug"] },
+    { "name": "win-msvc-release",        "displayName": "Win MSVC Release",        "inherits": ["win-msvc", "cfg-release"] },
+    { "name": "win-msvc-relwithdebinfo", "displayName": "Win MSVC RelWithDebInfo", "inherits": ["win-msvc", "cfg-relwithdebinfo"] },
+
+    { "name": "linux-gcc-debug-asan",   "displayName": "Linux GCC Debug + ASan/UBSan", "inherits": ["linux-gcc-debug",   "san-asan"] },
+    { "name": "linux-gcc-debug-tsan",   "displayName": "Linux GCC Debug + TSan",       "inherits": ["linux-gcc-debug",   "san-tsan"] },
+    { "name": "linux-clang-debug-asan", "displayName": "Linux Clang Debug + ASan/UBSan", "inherits": ["linux-clang-debug", "san-asan"] },
+    { "name": "linux-clang-debug-tsan", "displayName": "Linux Clang Debug + TSan",       "inherits": ["linux-clang-debug", "san-tsan"] },
+    { "name": "linux-clang-debug-msan", "displayName": "Linux Clang Debug + MSan",       "inherits": ["linux-clang-debug", "san-msan"] },
+
+    { "name": "linux-gcc-debug-lsan",   "displayName": "Linux GCC Debug + LSan",         "inherits": ["linux-gcc-debug",   "san-lsan"] },
+    { "name": "linux-clang-debug-lsan", "displayName": "Linux Clang Debug + LSan",       "inherits": ["linux-clang-debug", "san-lsan"] },
+
+    { "name": "macos-gcc-debug-asan",   "displayName": "macOS GCC Debug + ASan/UBSan", "inherits": ["macos-gcc-debug",   "san-asan"] },
+    { "name": "macos-gcc-debug-tsan",   "displayName": "macOS GCC Debug + TSan",       "inherits": ["macos-gcc-debug",   "san-tsan"] },
+    { "name": "macos-clang-debug-asan", "displayName": "macOS Clang Debug + ASan/UBSan", "inherits": ["macos-clang-debug", "san-asan"] },
+    { "name": "macos-clang-debug-tsan", "displayName": "macOS Clang Debug + TSan",       "inherits": ["macos-clang-debug", "san-tsan"] },
+
+    { "name": "win-msys2-gcc-debug-asan",   "displayName": "Win MSYS2 GCC Debug + ASan",   "inherits": ["win-msys2-gcc-debug",   "san-asan"] },
+    { "name": "win-msys2-clang-debug-asan", "displayName": "Win MSYS2 Clang Debug + ASan", "inherits": ["win-msys2-clang-debug", "san-asan"] },
+    { "name": "win-msvc-debug-asan",        "displayName": "Win MSVC Debug + ASan",        "inherits": ["win-msvc-debug",        "san-asan"] }
+  ],
+
+  "buildPresets": [
+    { "name": "linux-gcc-debug",          "configurePreset": "linux-gcc-debug" },
+    { "name": "linux-gcc-release",        "configurePreset": "linux-gcc-release" },
+    { "name": "linux-gcc-relwithdebinfo", "configurePreset": "linux-gcc-relwithdebinfo" },
+
+    { "name": "linux-clang-debug",          "configurePreset": "linux-clang-debug" },
+    { "name": "linux-clang-release",        "configurePreset": "linux-clang-release" },
+    { "name": "linux-clang-relwithdebinfo", "configurePreset": "linux-clang-relwithdebinfo" },
+
+    { "name": "macos-gcc-debug",          "configurePreset": "macos-gcc-debug" },
+    { "name": "macos-gcc-release",        "configurePreset": "macos-gcc-release" },
+    { "name": "macos-gcc-relwithdebinfo", "configurePreset": "macos-gcc-relwithdebinfo" },
+
+    { "name": "macos-clang-debug",          "configurePreset": "macos-clang-debug" },
+    { "name": "macos-clang-release",        "configurePreset": "macos-clang-release" },
+    { "name": "macos-clang-relwithdebinfo", "configurePreset": "macos-clang-relwithdebinfo" },
+
+    { "name": "win-msys2-gcc-debug",          "configurePreset": "win-msys2-gcc-debug" },
+    { "name": "win-msys2-gcc-release",        "configurePreset": "win-msys2-gcc-release" },
+    { "name": "win-msys2-gcc-relwithdebinfo", "configurePreset": "win-msys2-gcc-relwithdebinfo" },
+
+    { "name": "win-msys2-clang-debug",          "configurePreset": "win-msys2-clang-debug" },
+    { "name": "win-msys2-clang-release",        "configurePreset": "win-msys2-clang-release" },
+    { "name": "win-msys2-clang-relwithdebinfo", "configurePreset": "win-msys2-clang-relwithdebinfo" },
+
+    { "name": "win-msvc-debug",          "configurePreset": "win-msvc-debug" },
+    { "name": "win-msvc-release",        "configurePreset": "win-msvc-release" },
+    { "name": "win-msvc-relwithdebinfo", "configurePreset": "win-msvc-relwithdebinfo" },
+
+    { "name": "linux-gcc-debug-asan",       "configurePreset": "linux-gcc-debug-asan" },
+    { "name": "linux-gcc-debug-tsan",       "configurePreset": "linux-gcc-debug-tsan" },
+    { "name": "linux-clang-debug-asan",     "configurePreset": "linux-clang-debug-asan" },
+    { "name": "linux-clang-debug-tsan",     "configurePreset": "linux-clang-debug-tsan" },
+    { "name": "linux-clang-debug-msan",     "configurePreset": "linux-clang-debug-msan" },
+    { "name": "linux-gcc-debug-lsan",       "configurePreset": "linux-gcc-debug-lsan" },
+    { "name": "linux-clang-debug-lsan",     "configurePreset": "linux-clang-debug-lsan" },
+    { "name": "macos-gcc-debug-asan",       "configurePreset": "macos-gcc-debug-asan" },
+    { "name": "macos-gcc-debug-tsan",       "configurePreset": "macos-gcc-debug-tsan" },
+    { "name": "macos-clang-debug-asan",     "configurePreset": "macos-clang-debug-asan" },
+    { "name": "macos-clang-debug-tsan",     "configurePreset": "macos-clang-debug-tsan" },
+    { "name": "win-msys2-gcc-debug-asan",   "configurePreset": "win-msys2-gcc-debug-asan" },
+    { "name": "win-msys2-clang-debug-asan", "configurePreset": "win-msys2-clang-debug-asan" },
+    { "name": "win-msvc-debug-asan",        "configurePreset": "win-msvc-debug-asan" }
+  ],
+
+  "testPresets": [
+    { "name": "linux-gcc-test",          "configurePreset": "linux-gcc-debug",          "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "linux-clang-test",        "configurePreset": "linux-clang-debug",        "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "macos-gcc-test",          "configurePreset": "macos-gcc-debug",          "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "macos-clang-test",        "configurePreset": "macos-clang-debug",        "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "win-msys2-gcc-test",      "configurePreset": "win-msys2-gcc-debug",      "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "win-msys2-clang-test",    "configurePreset": "win-msys2-clang-debug",    "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "win-msvc-test",           "configurePreset": "win-msvc-debug",           "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+
+    { "name": "linux-gcc-test-asan",       "configurePreset": "linux-gcc-debug-asan",       "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "linux-gcc-test-tsan",       "configurePreset": "linux-gcc-debug-tsan",       "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "linux-clang-test-asan",     "configurePreset": "linux-clang-debug-asan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "linux-clang-test-tsan",     "configurePreset": "linux-clang-debug-tsan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "linux-clang-test-msan",     "configurePreset": "linux-clang-debug-msan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "linux-gcc-test-lsan",       "configurePreset": "linux-gcc-debug-lsan",       "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "linux-clang-test-lsan",     "configurePreset": "linux-clang-debug-lsan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "macos-gcc-test-asan",       "configurePreset": "macos-gcc-debug-asan",       "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "macos-gcc-test-tsan",       "configurePreset": "macos-gcc-debug-tsan",       "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "macos-clang-test-asan",     "configurePreset": "macos-clang-debug-asan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "macos-clang-test-tsan",     "configurePreset": "macos-clang-debug-tsan",     "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "win-msys2-gcc-test-asan",   "configurePreset": "win-msys2-gcc-debug-asan",   "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "win-msys2-clang-test-asan", "configurePreset": "win-msys2-clang-debug-asan", "output": { "outputOnFailure": true, "verbosity": "verbose" } },
+    { "name": "win-msvc-test-asan",        "configurePreset": "win-msvc-debug-asan",        "output": { "outputOnFailure": true, "verbosity": "verbose" } }
+  ]
+}
