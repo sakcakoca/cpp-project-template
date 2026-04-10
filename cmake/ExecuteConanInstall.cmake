@@ -33,36 +33,48 @@ else()
   endif()
 
   # ── Detect enabled sanitizers and construct flags for Conan ─────────────
-  set(_SANITIZER_FLAGS "")
-  set(_SANITIZER_LIST "")
-  if(ENABLE_SANITIZER_ADDRESS)
-    list(APPEND _SANITIZER_LIST "address")
-  endif()
-  if(ENABLE_SANITIZER_UNDEFINED)
-    list(APPEND _SANITIZER_LIST "undefined")
-  endif()
-  if(ENABLE_SANITIZER_LEAK)
-    list(APPEND _SANITIZER_LIST "leak")
-  endif()
-  if(ENABLE_SANITIZER_THREAD)
-    list(APPEND _SANITIZER_LIST "thread")
-  endif()
-  if(ENABLE_SANITIZER_MEMORY)
-    list(APPEND _SANITIZER_LIST "memory")
-  endif()
-
-  if(_SANITIZER_LIST)
-    list(JOIN _SANITIZER_LIST "," _SANITIZER_JOINED)
-    set(_SANITIZER_FLAGS "-fsanitize=${_SANITIZER_JOINED} -fno-omit-frame-pointer")
-    set(_CONAN_SAN_CONF
-      "--conf=tools.build:cflags+=[\"${_SANITIZER_FLAGS}\"]"
-      "--conf=tools.build:cxxflags+=[\"${_SANITIZER_FLAGS}\"]"
-      "--conf=tools.build:exelinkflags+=[\"-fsanitize=${_SANITIZER_JOINED}\"]"
-      "--conf=tools.build:sharedlinkflags+=[\"-fsanitize=${_SANITIZER_JOINED}\"]"
-    )
-    message(STATUS "[Conan] Sanitizer flags detected: ${_SANITIZER_FLAGS}")
+  set(_CONAN_SAN_CONF "")
+  if(MSVC)
+    # Only AddressSanitizer is supported on MSVC, and only with /fsanitize=address
+    if(ENABLE_SANITIZER_ADDRESS)
+      set(_CONAN_SAN_CONF
+        "--conf=tools.build:cflags+=[\"/fsanitize=address\"]"
+        "--conf=tools.build:cxxflags+=[\"/fsanitize=address\"]"
+        "--conf=tools.build:exelinkflags+=[\"/fsanitize=address\"]"
+        "--conf=tools.build:sharedlinkflags+=[\"/fsanitize=address\"]"
+      )
+      message(STATUS "[Conan] MSVC AddressSanitizer flags enabled: /fsanitize=address")
+    endif()
+    # No other sanitizer is supported on MSVC
   else()
-    set(_CONAN_SAN_CONF "")
+    set(_SANITIZER_LIST "")
+    if(ENABLE_SANITIZER_ADDRESS)
+      list(APPEND _SANITIZER_LIST "address")
+    endif()
+    if(ENABLE_SANITIZER_UNDEFINED)
+      list(APPEND _SANITIZER_LIST "undefined")
+    endif()
+    if(ENABLE_SANITIZER_LEAK)
+      list(APPEND _SANITIZER_LIST "leak")
+    endif()
+    if(ENABLE_SANITIZER_THREAD)
+      list(APPEND _SANITIZER_LIST "thread")
+    endif()
+    if(ENABLE_SANITIZER_MEMORY)
+      list(APPEND _SANITIZER_LIST "memory")
+    endif()
+
+    if(_SANITIZER_LIST)
+      list(JOIN _SANITIZER_LIST "," _SANITIZER_JOINED)
+      set(_SANITIZER_FLAGS "-fsanitize=${_SANITIZER_JOINED} -fno-omit-frame-pointer")
+      set(_CONAN_SAN_CONF
+        "--conf=tools.build:cflags+=[\"${_SANITIZER_FLAGS}\"]"
+        "--conf=tools.build:cxxflags+=[\"${_SANITIZER_FLAGS}\"]"
+        "--conf=tools.build:exelinkflags+=[\"-fsanitize=${_SANITIZER_JOINED}\"]"
+        "--conf=tools.build:sharedlinkflags+=[\"-fsanitize=${_SANITIZER_JOINED}\"]"
+      )
+      message(STATUS "[Conan] Sanitizer flags detected: ${_SANITIZER_FLAGS}")
+    endif()
   endif()
 
   execute_process(

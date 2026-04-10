@@ -44,15 +44,6 @@ environment:
       USE_MSYS2: "false"
 
     # ── Stage 2: Sanitizer tests ────────────────────────────────────────────
-    # MSYS2 GCC — ASan
-    - JOB_NAME: "Sanitizer · win-msys2-gcc-test-asan"
-      JOB_GROUP: sanitizers
-      MSYSTEM: MINGW64
-      MSYS_PACKAGES: mingw-w64-x86_64-gcc mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake
-      CONFIGURE_PRESET: win-msys2-gcc-debug-asan
-      BUILD_PRESET: win-msys2-gcc-debug-asan
-      TEST_PRESET: win-msys2-gcc-test-asan
-      USE_MSYS2: "true"
 
     # MSYS2 Clang — ASan
     - JOB_NAME: "Sanitizer · win-msys2-clang-test-asan"

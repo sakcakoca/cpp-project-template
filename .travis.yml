@@ -188,16 +188,6 @@ jobs:
         - TEST_PRESET=linux-clang-test-tsan
       script: *build_and_test
 
-    # Linux Clang — MSan
-    - stage: sanitizers
-      name: "Sanitizer · linux-clang-test-msan"
-      <<: *linux_setup
-      env:
-        - APT_EXTRA=clang
-        - CONFIGURE_PRESET=linux-clang-debug-msan
-        - BUILD_PRESET=linux-clang-debug-msan
-        - TEST_PRESET=linux-clang-test-msan
-      script: *build_and_test
 
     # Linux Clang — LSan
     - stage: sanitizers

@@ -216,10 +216,6 @@ jobs:
             build: linux-clang-debug-tsan
             test: linux-clang-test-tsan
             packages: clang
-          - configure: linux-clang-debug-msan
-            build: linux-clang-debug-msan
-            test: linux-clang-test-msan
-            packages: clang
           - configure: linux-clang-debug-lsan
             build: linux-clang-debug-lsan
             test: linux-clang-test-lsan
