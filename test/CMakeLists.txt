@@ -9,7 +9,7 @@ find_package(GTest REQUIRED COMPONENTS gtest gmock gtest_main gmock_main)
 set(TEST_EXECUTABLE_NAME "MyProjectTest")
 add_executable(${TEST_EXECUTABLE_NAME} myproject_test.cpp)
 
-target_compile_features(${TEST_EXECUTABLE_NAME} PRIVATE cxx_std_26)
+target_compile_features(${TEST_EXECUTABLE_NAME} PRIVATE cxx_std_23)
 
 # Link to the main library and GoogleTest
 target_link_libraries(${TEST_EXECUTABLE_NAME} PRIVATE myproject_library GTest::gtest GTest::gtest_main project_warnings)

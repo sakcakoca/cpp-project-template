@@ -3,7 +3,7 @@
 
 Usage:
     python3 setup_project.py Calculator
-    python3 setup_project.py MyWidget
+    python3 setup_project.py MyWidget --std 20
     python3 setup_project.py "Traffic Scheduler"   # spaces are stripped
 
 The script performs all the renaming steps described in the README:
@@ -13,6 +13,7 @@ The script performs all the renaming steps described in the README:
       PascalCase  (e.g. TrafficScheduler)  -> project(), test names
       snake_case  (e.g. traffic_scheduler) -> files, namespaces, targets
       UPPER_CASE  (e.g. TRAFFICSCHEDULER)  -> CMake option prefix
+  - Optionally updates the C++ standard version across all files
 
 After running, the template is ready to build - no manual edits needed.
 """
@@ -160,6 +161,70 @@ class ProjectRenamer:
             print("  ctest --preset <preset>")
 
 
+class CppStandardUpdater:
+    """Updates the C++ standard version across all relevant files."""
+
+    # The current default standard in the template.
+    _DEFAULT_STD = "23"
+
+    _VALID_STANDARDS = ("11", "14", "17", "20", "23", "26")
+
+    # Files that contain C++ standard references.
+    _FILES = (
+        "CMakeLists.txt",
+        "src/CMakeLists.txt",
+        "apps/CMakeLists.txt",
+        "test/CMakeLists.txt",
+        "cmake/CompilerWarnings.cmake",
+        "README.md",
+        "conan_profiles/linux-gcc",
+        "conan_profiles/linux-clang",
+        "conan_profiles/macos-gcc",
+        "conan_profiles/macos-clang",
+        "conan_profiles/win-msys2-gcc",
+        "conan_profiles/win-msys2-clang",
+        "conan_profiles/win-msvc",
+    )
+
+    def __init__(self, root: Path, new_std: str) -> None:
+        if new_std not in self._VALID_STANDARDS:
+            raise ValueError(
+                f"Invalid C++ standard '{new_std}'. "
+                f"Valid values: {', '.join(self._VALID_STANDARDS)}"
+            )
+        self._root = root
+        self._old = self._DEFAULT_STD
+        self._new = new_std
+        self._replacements = [
+            (f"cxx_std_{self._old}",            f"cxx_std_{self._new}"),
+            (f"compiler.cppstd={self._old}",    f"compiler.cppstd={self._new}"),
+            (f"CMAKE_CXX_STANDARD {self._old}", f"CMAKE_CXX_STANDARD {self._new}"),
+            (f"C++{self._old}",                 f"C++{self._new}"),
+        ]
+
+    def run(self, dry_run: bool = False) -> None:
+        """Apply C++ standard replacements to all relevant files."""
+        if self._old == self._new:
+            print(f"C++ standard : {self._new} (unchanged)")
+            return
+
+        print(f"C++ standard : {self._old} -> {self._new}")
+        print()
+
+        for rel_path in self._FILES:
+            filepath = self._root / rel_path
+            if not filepath.exists():
+                continue
+            if not dry_run:
+                content = filepath.read_text(encoding="utf-8")
+                for old_text, new_text in self._replacements:
+                    content = content.replace(old_text, new_text)
+                filepath.write_text(content, encoding="utf-8")
+            print(f"  [std]  {rel_path}")
+
+        print()
+
+
 def main() -> None:
     """Parse arguments and run the renamer."""
     parser = argparse.ArgumentParser(
@@ -174,12 +239,23 @@ def main() -> None:
         action="store_true",
         help="Show what would be changed without modifying files.",
     )
+    parser.add_argument(
+        "--std",
+        metavar="VER",
+        choices=("11", "14", "17", "20", "23", "26"),
+        default=None,
+        help="C++ standard version (e.g. 20, 23, 26). Default: no change.",
+    )
     args = parser.parse_args()
 
     project_name = ProjectName(args.name)
     root = Path(__file__).resolve().parent
     renamer = ProjectRenamer(root, project_name)
     renamer.run(dry_run=args.dry_run)
+
+    if args.std:
+        updater = CppStandardUpdater(root, args.std)
+        updater.run(dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

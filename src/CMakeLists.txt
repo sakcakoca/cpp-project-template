@@ -23,8 +23,8 @@ target_include_directories(myproject_library PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-# All users of this library will need at least C++26
-target_compile_features(myproject_library PUBLIC cxx_std_26)
+# All users of this library will need at least C++23
+target_compile_features(myproject_library PUBLIC cxx_std_23)
 
 # Apply project-wide warnings
 target_link_libraries(myproject_library PRIVATE project_warnings)

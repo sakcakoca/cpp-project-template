@@ -1,6 +1,6 @@
 # C++ Project Template
 
-A cross-platform C++26 project template with CMake presets, Conan 2, sanitizers,
+A cross-platform C++23 project template with CMake presets, Conan 2, sanitizers,
 Valgrind, Doxygen, PVS-Studio, clang-tidy, and CI for GitHub Actions, Travis CI,
 and AppVeyor.
 
@@ -13,7 +13,7 @@ and AppVeyor.
 | **CMake** | 3.21+ | Build system |
 | **Ninja** | any | Build backend (used by all presets) |
 | **Conan** | 2.x | Package manager (`pip install conan`) |
-| **GCC** or **Clang** or **MSVC** | C++26 capable | Compiler |
+| **GCC** or **Clang** or **MSVC** | C++23 capable | Compiler |
 | **Python** | 3.8+ | Needed for Conan |
 
 ### Optional tools
@@ -268,10 +268,16 @@ and include paths. Three name forms are derived:
 | `Calculator` | `Calculator` | `calculator` | `CALCULATOR` |
 | `my-widget` | `MyWidget` | `my_widget` | `MYWIDGET` |
 
+Use `--std` to set the C++ standard version (default is 23):
+
+```bash
+python3 setup_project.py Calculator --std 20
+```
+
 Use `--dry-run` to preview changes without modifying anything:
 
 ```bash
-python3 setup_project.py --dry-run Calculator
+python3 setup_project.py --dry-run --std 20 Calculator
 ```
 
 ### Manual setup (6 steps)

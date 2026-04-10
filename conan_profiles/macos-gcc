@@ -8,7 +8,7 @@ os=Macos
 arch=armv8
 compiler=gcc
 compiler.version=15
-compiler.cppstd=26
+compiler.cppstd=23
 compiler.libcxx=libstdc++11
 build_type=Release
 

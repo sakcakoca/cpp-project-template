@@ -83,9 +83,8 @@ function(set_project_warnings project_name)
     -Wextra-semi
     -Wzero-as-null-pointer-constant
     -Wdeprecated
-    -Wimplicit-int-conversion
 
-    # Disabled for C++26 compatibility
+    # Disabled for C++23 compatibility
     # -Wno-c++98-compat
   )
 
@@ -118,6 +117,8 @@ function(set_project_warnings project_name)
   if(MSVC)
     set(_warnings ${MSVC_WARNINGS})
   elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+    # Clang-only warnings (not supported by GCC)
+    list(APPEND CLANG_WARNINGS -Wimplicit-int-conversion)
     set(_warnings ${CLANG_WARNINGS})
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(_warnings ${GCC_WARNINGS})
