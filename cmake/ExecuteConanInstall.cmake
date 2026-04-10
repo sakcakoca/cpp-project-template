@@ -32,6 +32,21 @@ else()
       "[Conan] 'conan' not found on PATH. Install Conan 2: pip install conan")
   endif()
 
+
+  # ── Resolve profiles from environment ──────────────────────────────────
+  if(DEFINED ENV{CONAN_HOST_PROFILE})
+    set(_HOST_PROFILE "$ENV{CONAN_HOST_PROFILE}")
+  else()
+    set(_HOST_PROFILE "default")
+  endif()
+
+  if(DEFINED ENV{CONAN_BUILD_PROFILE})
+    set(_BUILD_PROFILE "$ENV{CONAN_BUILD_PROFILE}")
+  else()
+    set(_BUILD_PROFILE "default")
+  endif()
+
+
   # ── Detect enabled sanitizers and construct flags for Conan ─────────────
   set(_CONAN_SAN_CONF "")
   set(_IS_MSVC OFF)
