@@ -167,11 +167,6 @@ cmake --preset linux-clang-debug-tsan
 cmake --build --preset linux-clang-debug-tsan
 ctest --preset linux-clang-test-tsan
 
-# MemorySanitizer (Clang only)
-cmake --preset linux-clang-debug-msan
-cmake --build --preset linux-clang-debug-msan
-ctest --preset linux-clang-test-msan
-
 # LeakSanitizer (Linux only)
 cmake --preset linux-gcc-debug-lsan
 cmake --build --preset linux-gcc-debug-lsan
@@ -326,33 +321,6 @@ presets.
 
 ---
 
-## Hosting on GitHub
-
-### Option A: GitHub Template Repository (recommended)
-
-1. Create a new repository on GitHub (e.g. `cpp-project-template`).
-2. Push this folder's contents:
-   ```bash
-   cd cpp-project-template
-   git init
-   git add .
-   git commit -m "Initial project template"
-   git remote add origin https://github.com/<you>/cpp-project-template.git
-   git push -u origin main
-   ```
-3. Go to **Settings > General** and check **"Template repository"**.
-4. Now anyone can click **"Use this template"** on the repo page to create a
-   new project from it — GitHub creates a fresh repo with no commit history.
-
-### Option B: Fork / Clone
-
-Simply clone or fork the repository and rename for your project.
-
-### Option C: Local copy
-
-Copy the `cpp-project-template/` folder, rename it, and `git init` inside.
-
----
 
 ## Project Structure
 
