@@ -227,6 +227,7 @@ jobs:
       - name: Leaks check
         run: |
           TEST_EXE_NAME=$(python3 .github/workflows/resolve_test_executable.py)
+          echo "Resolved test executable: $TEST_EXE_NAME"
           MallocStackLogging=1 leaks --atExit -- "./build/${{ matrix.configure }}/test/${TEST_EXE_NAME}"
 
   # ───────────────────────────────────────────────────────────────────────────

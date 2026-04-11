@@ -16,6 +16,7 @@ target_link_libraries(${TEST_EXECUTABLE_NAME} PRIVATE myproject_library GTest::g
 
 include(GoogleTest)
 gtest_discover_tests(
+  ${TEST_EXECUTABLE_NAME}
   DISCOVERY_MODE PRE_TEST
   DISCOVERY_TIMEOUT 60
 )

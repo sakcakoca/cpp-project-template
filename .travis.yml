@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Travis CI — Linux + macOS build & test matrix
+# Travis CI — Linux build & test matrix
 #
 # Windows is NOT supported by Travis — see appveyor.yml for Windows CI.
 #
@@ -32,31 +32,12 @@ _linux_setup: &linux_setup
     - pip install conan
     - conan profile detect
 
-_macos_setup: &macos_setup
-  os: osx
-  osx_image: xcode15.4
-  before_install:
-    - brew install ${BREW_PACKAGES}
-    - conan profile detect
-
-_macos_build_and_test: &macos_build_and_test
-  - cmake --preset ${CONFIGURE_PRESET} -DCMAKE_OSX_SYSROOT=$(xcrun --show-sdk-path)
-  - cmake --build --preset ${BUILD_PRESET}
-  - ctest --preset ${TEST_PRESET}
-
-_macos_build_and_leaks: &macos_build_and_leaks
-  - cmake --preset ${CONFIGURE_PRESET} -DCMAKE_OSX_SYSROOT=$(xcrun --show-sdk-path)
-  - cmake --build --preset ${BUILD_PRESET}
-  - TEST_EXE_NAME=$(python3 .github/workflows/resolve_test_executable.py)
-  - MallocStackLogging=1 leaks --atExit -- ./build/${CONFIGURE_PRESET}/test/${TEST_EXE_NAME}
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Build stages — run in order, each stage's jobs run in parallel
 # ─────────────────────────────────────────────────────────────────────────────
 stages:
   - name: test
   - name: valgrind
-  - name: leaks
   - name: sanitizers
 
 jobs:
@@ -89,28 +70,6 @@ jobs:
         - TEST_PRESET=linux-clang-test
       script: *build_and_test
 
-    # macOS GCC
-    - stage: test
-      name: "Test · macos-gcc"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="gcc ninja cmake conan"
-        - CONFIGURE_PRESET=macos-gcc-debug
-        - BUILD_PRESET=macos-gcc-debug
-        - TEST_PRESET=macos-gcc-test
-      script: *macos_build_and_test
-
-    # macOS Clang
-    - stage: test
-      name: "Test · macos-clang"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="llvm ninja cmake conan"
-        - CONFIGURE_PRESET=macos-clang-debug
-        - BUILD_PRESET=macos-clang-debug
-        - TEST_PRESET=macos-clang-test
-      script: *macos_build_and_test
-
     # ─────────────────────────────────────────────────────────────────────────
     # Stage 2: Valgrind memcheck (Linux only, no sanitizers)
     # ─────────────────────────────────────────────────────────────────────────
@@ -138,30 +97,7 @@ jobs:
       script: *build_and_valgrind
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Stage 3: Leaks checks (macOS only, no sanitizers)
-    # ─────────────────────────────────────────────────────────────────────────
-    # macOS GCC + leaks
-    - stage: leaks
-      name: "Leaks · macos-gcc"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="gcc ninja cmake conan"
-        - CONFIGURE_PRESET=macos-gcc-debug
-        - BUILD_PRESET=macos-gcc-debug
-      script: *macos_build_and_leaks
-
-    # macOS Clang + leaks
-    - stage: leaks
-      name: "Leaks · macos-clang"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="llvm ninja cmake conan"
-        - CONFIGURE_PRESET=macos-clang-debug
-        - BUILD_PRESET=macos-clang-debug
-      script: *macos_build_and_leaks
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Stage 4: Sanitizer tests
+    # Stage 3: Sanitizer tests
     # ─────────────────────────────────────────────────────────────────────────
     # Linux GCC — ASan + UBSan
     - stage: sanitizers
@@ -230,24 +166,3 @@ jobs:
         - TEST_PRESET=linux-clang-test-lsan
       script: *build_and_test
 
-    # macOS Clang — ASan + UBSan
-    - stage: sanitizers
-      name: "Sanitizer · macos-clang-test-asan"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="llvm ninja cmake conan"
-        - CONFIGURE_PRESET=macos-clang-debug-asan
-        - BUILD_PRESET=macos-clang-debug-asan
-        - TEST_PRESET=macos-clang-test-asan
-      script: *macos_build_and_test
-
-    # macOS Clang — TSan
-    - stage: sanitizers
-      name: "Sanitizer · macos-clang-test-tsan"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="llvm ninja cmake conan"
-        - CONFIGURE_PRESET=macos-clang-debug-tsan
-        - BUILD_PRESET=macos-clang-debug-tsan
-        - TEST_PRESET=macos-clang-test-tsan
-      script: *macos_build_and_test
