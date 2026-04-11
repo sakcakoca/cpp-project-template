@@ -50,12 +50,6 @@ else()
     set(_BUILD_PROFILE "default")
   endif()
 
-  if(DEFINED ENV{CONAN_BUILD_MODE})
-    set(_CONAN_BUILD_MODE "$ENV{CONAN_BUILD_MODE}")
-  else()
-    set(_CONAN_BUILD_MODE "missing")
-  endif()
-
   # ── Resolve Conan host settings from preset-provided environment ───────
   set(_CONAN_HOST_SETTINGS "")
   if(DEFINED ENV{CONAN_SETTING_COMPILER})
@@ -128,7 +122,6 @@ else()
 
   message(STATUS "[Conan] Host profile : ${_HOST_PROFILE}")
   message(STATUS "[Conan] Build profile: ${_BUILD_PROFILE}")
-  message(STATUS "[Conan] Build mode  : ${_CONAN_BUILD_MODE}")
   message(STATUS "[Conan] Build type   : ${CMAKE_BUILD_TYPE}")
   if(_CONAN_HOST_SETTINGS)
     message(STATUS "[Conan] Extra host settings enabled from presets")
@@ -141,7 +134,7 @@ else()
   execute_process(
     COMMAND "${_CONAN_EXE}" install "${CMAKE_SOURCE_DIR}"
       "--output-folder=${CMAKE_BINARY_DIR}"
-      "--build=${_CONAN_BUILD_MODE}"
+      --build=missing
       "-pr:h" "${_HOST_PROFILE}"
       "-pr:b" "${_BUILD_PROFILE}"
       "-s:h"  "build_type=${CMAKE_BUILD_TYPE}"

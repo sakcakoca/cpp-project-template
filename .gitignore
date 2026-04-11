@@ -2,3 +2,6 @@ build
 out
 .idea
 CMakeUserPresets.json
+.venv
+uv.lock
+pyproject.toml

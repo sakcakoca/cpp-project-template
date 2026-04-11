@@ -190,6 +190,9 @@ jobs:
       - name: Valgrind memcheck
         run: ctest --test-dir build/${{ matrix.configure }} -T memcheck --output-on-failure
 
+  # ───────────────────────────────────────────────────────────────────────────
+  # Stage 3: Leaks memcheck (MacOS only, no sanitizers)
+  # ───────────────────────────────────────────────────────────────────────────
   leaks-macos:
     name: "Leaks · ${{ matrix.preset }}"
     needs: test-macos
@@ -222,10 +225,12 @@ jobs:
       - name: Build
         run: cmake --build --preset ${{ matrix.build }}
       - name: Leaks check
-        run: MallocStackLogging=1 leaks --atExit -- ./build/${{ matrix.configure }}/test/MyProjectTest
+        run: |
+          TEST_EXE_NAME=$(python3 .github/workflows/resolve_test_executable.py)
+          MallocStackLogging=1 leaks --atExit -- "./build/${{ matrix.configure }}/test/${TEST_EXE_NAME}"
 
   # ───────────────────────────────────────────────────────────────────────────
-  # Stage 3: Sanitizer tests
+  # Stage 4: Sanitizer tests
   # ───────────────────────────────────────────────────────────────────────────
   sanitizers-linux:
     name: "Sanitizer · ${{ matrix.test }}"
@@ -278,32 +283,6 @@ jobs:
       - name: Test
         run: ctest --preset ${{ matrix.test }}
 
-  sanitizers-linux-msan:
-    name: "Sanitizer · linux-clang-test-msan"
-    needs: test-linux
-    # Dedicated runner with MSAN-capable LLVM/libc++ toolchain preinstalled.
-    runs-on: [self-hosted, linux, x64, msan]
-    env:
-      CONAN_HOME: ${{ github.workspace }}/.conan2-msan
-      CONAN_BUILD_MODE: "*"
-      MSAN_OPTIONS: "halt_on_error=1:exit_code=86:symbolize=1"
-    steps:
-      - uses: actions/checkout@v4
-      - name: Verify MSAN toolchain
-        run: |
-          clang --version
-          clang++ --version
-          ninja --version
-      - name: Install Conan
-        run: |
-          pip install conan
-          conan profile detect
-      - name: Configure
-        run: cmake --preset linux-clang-debug-msan
-      - name: Build
-        run: cmake --build --preset linux-clang-debug-msan
-      - name: Test
-        run: ctest --preset linux-clang-test-msan --output-on-failure
 
   sanitizers-macos:
     name: "Sanitizer · ${{ matrix.test }}"

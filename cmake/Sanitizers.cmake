@@ -129,13 +129,14 @@ endfunction()
 
 function(get_conan_sanitizer_conf out_var)
   collect_enabled_sanitizers(_sanitizers)
-  _sanitizers_detect_compilers(_is_msvc _is_clang)
 
   set(_conf "")
   if(NOT _sanitizers)
     set(${out_var} "" PARENT_SCOPE)
     return()
   endif()
+
+  _sanitizers_detect_compilers(_is_msvc _is_clang)
 
   if(_is_msvc)
     if("address" IN_LIST _sanitizers)
@@ -164,13 +165,14 @@ endfunction()
 
 function(enable_sanitizers target_name)
   collect_enabled_sanitizers(_sanitizers)
-  _sanitizers_detect_compilers(_is_msvc _is_clang)
 
   # ── Apply flags ─────────────────────────────────────────────────────────
   list(LENGTH _sanitizers _san_count)
   if(_san_count EQUAL 0)
     return()
   endif()
+
+  _sanitizers_detect_compilers(_is_msvc _is_clang)
 
   if(_is_msvc)
     # MSVC only supports /fsanitize=address
@@ -201,12 +203,13 @@ endfunction()
 # ─────────────────────────────────────────────────────────────────────────────
 function(enable_sanitizers_global)
   collect_enabled_sanitizers(_sanitizers)
-  _sanitizers_detect_compilers(_is_msvc _is_clang)
 
   list(LENGTH _sanitizers _san_count)
   if(_san_count EQUAL 0)
     return()
   endif()
+
+  _sanitizers_detect_compilers(_is_msvc _is_clang)
 
   if(_is_msvc)
     if("address" IN_LIST _sanitizers)

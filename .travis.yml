@@ -47,7 +47,8 @@ _macos_build_and_test: &macos_build_and_test
 _macos_build_and_leaks: &macos_build_and_leaks
   - cmake --preset ${CONFIGURE_PRESET} -DCMAKE_OSX_SYSROOT=$(xcrun --show-sdk-path)
   - cmake --build --preset ${BUILD_PRESET}
-  - MallocStackLogging=1 leaks --atExit -- ./build/${CONFIGURE_PRESET}/test/MyProjectTest
+  - TEST_EXE_NAME=$(python3 .github/workflows/resolve_test_executable.py)
+  - MallocStackLogging=1 leaks --atExit -- ./build/${CONFIGURE_PRESET}/test/${TEST_EXE_NAME}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Build stages — run in order, each stage's jobs run in parallel
@@ -135,6 +136,29 @@ jobs:
         - CONFIGURE_PRESET=linux-clang-debug
         - BUILD_PRESET=linux-clang-debug
       script: *build_and_valgrind
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Stage 3: Leaks checks (macOS only, no sanitizers)
+    # ─────────────────────────────────────────────────────────────────────────
+    # macOS GCC + leaks
+    - stage: leaks
+      name: "Leaks · macos-gcc"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="gcc ninja cmake conan"
+        - CONFIGURE_PRESET=macos-gcc-debug
+        - BUILD_PRESET=macos-gcc-debug
+      script: *macos_build_and_leaks
+
+    # macOS Clang + leaks
+    - stage: leaks
+      name: "Leaks · macos-clang"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="llvm ninja cmake conan"
+        - CONFIGURE_PRESET=macos-clang-debug
+        - BUILD_PRESET=macos-clang-debug
+      script: *macos_build_and_leaks
 
     # ─────────────────────────────────────────────────────────────────────────
     # Stage 4: Sanitizer tests
