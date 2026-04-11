@@ -51,8 +51,22 @@ function(_sanitizers_detect_compilers out_is_msvc out_is_clang)
   set(${out_is_clang} ${_is_clang} PARENT_SCOPE)
 endfunction()
 
+function(_sanitizers_get_effective_system_name out_name)
+  if(CMAKE_SYSTEM_NAME)
+    set(_system_name "${CMAKE_SYSTEM_NAME}")
+  elseif(CMAKE_HOST_SYSTEM_NAME)
+    # ExecuteConanInstall includes this module before project(); host name is the
+    # best available signal in that phase.
+    set(_system_name "${CMAKE_HOST_SYSTEM_NAME}")
+  else()
+    set(_system_name "")
+  endif()
+  set(${out_name} "${_system_name}" PARENT_SCOPE)
+endfunction()
+
 function(collect_enabled_sanitizers out_var)
   _sanitizers_detect_compilers(_is_msvc _is_clang)
+  _sanitizers_get_effective_system_name(_system_name)
 
   set(_sanitizers "")
 
@@ -73,7 +87,7 @@ function(collect_enabled_sanitizers out_var)
     if(_is_msvc)
       message(WARNING
         "[Sanitizers] MSVC does not support LeakSanitizer - skipping")
-    elseif(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    elseif(NOT _system_name STREQUAL "Linux")
       message(WARNING
         "[Sanitizers] LeakSanitizer is only reliable on Linux - skipping")
     else()
@@ -99,7 +113,7 @@ function(collect_enabled_sanitizers out_var)
       message(FATAL_ERROR
         "[Sanitizers] MemorySanitizer is incompatible with Address/Thread/LeakSanitizer")
     endif()
-    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(NOT _system_name STREQUAL "Linux")
       message(FATAL_ERROR "[Sanitizers] MemorySanitizer is supported on Linux only")
     endif()
     if(NOT _is_clang)

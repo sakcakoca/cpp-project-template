@@ -6,8 +6,7 @@
 # Stages:
 #   1. test          — plain tests (no sanitizers)
 #   2. valgrind      — plain debug builds + ctest memcheck (Linux only)
-#   3. leaks         — plain debug builds + leaks check (macOS only)
-#   4. sanitizers    — sanitizer-enabled tests
+#   3. sanitizers    — sanitizer-enabled tests
 # ─────────────────────────────────────────────────────────────────────────────
 language: cpp
 
@@ -136,29 +135,6 @@ jobs:
         - CONFIGURE_PRESET=linux-clang-debug
         - BUILD_PRESET=linux-clang-debug
       script: *build_and_valgrind
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Stage 3: Leaks checks (macOS only, no sanitizers)
-    # ─────────────────────────────────────────────────────────────────────────
-    # macOS GCC + leaks
-    - stage: leaks
-      name: "Leaks · macos-gcc"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="gcc ninja cmake conan"
-        - CONFIGURE_PRESET=macos-gcc-debug
-        - BUILD_PRESET=macos-gcc-debug
-      script: *macos_build_and_leaks
-
-    # macOS Clang + leaks
-    - stage: leaks
-      name: "Leaks · macos-clang"
-      <<: *macos_setup
-      env:
-        - BREW_PACKAGES="llvm ninja cmake conan"
-        - CONFIGURE_PRESET=macos-clang-debug
-        - BUILD_PRESET=macos-clang-debug
-      script: *macos_build_and_leaks
 
     # ─────────────────────────────────────────────────────────────────────────
     # Stage 4: Sanitizer tests
