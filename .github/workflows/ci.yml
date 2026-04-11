@@ -281,17 +281,19 @@ jobs:
   sanitizers-linux-msan:
     name: "Sanitizer · linux-clang-test-msan"
     needs: test-linux
-    runs-on: ubuntu-latest
+    # Dedicated runner with MSAN-capable LLVM/libc++ toolchain preinstalled.
+    runs-on: [self-hosted, linux, x64, msan]
     env:
       CONAN_HOME: ${{ github.workspace }}/.conan2-msan
       CONAN_BUILD_MODE: "*"
       MSAN_OPTIONS: "halt_on_error=1:exit_code=86:symbolize=1"
     steps:
       - uses: actions/checkout@v4
-      - name: Install system packages
+      - name: Verify MSAN toolchain
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build clang libc++-dev libc++abi-dev
+          clang --version
+          clang++ --version
+          ninja --version
       - name: Install Conan
         run: |
           pip install conan
