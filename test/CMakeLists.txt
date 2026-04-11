@@ -20,3 +20,9 @@ gtest_add_tests(
   TARGET ${TEST_EXECUTABLE_NAME}
   SOURCES myproject_test.cpp
 )
+
+# Commented out to use gtest_addd_tests
+#gtest_discover_tests(
+#  DISCOVERY_MODE PRE_TEST
+#  DISCOVERY_TIMEOUT 60
+#)

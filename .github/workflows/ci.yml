@@ -261,10 +261,6 @@ jobs:
             build: linux-clang-debug-lsan
             test: linux-clang-test-lsan
             packages: clang
-          - configure: linux-clang-debug-msan
-            build: linux-clang-debug-msan
-            test: linux-clang-test-msan
-            packages: clang libc++-dev libc++abi-dev
     steps:
       - uses: actions/checkout@v4
       - name: Install system packages
@@ -281,6 +277,31 @@ jobs:
         run: cmake --build --preset ${{ matrix.build }}
       - name: Test
         run: ctest --preset ${{ matrix.test }}
+
+  sanitizers-linux-msan:
+    name: "Sanitizer · linux-clang-test-msan"
+    needs: test-linux
+    runs-on: ubuntu-latest
+    env:
+      CONAN_HOME: ${{ github.workspace }}/.conan2-msan
+      CONAN_BUILD_MODE: "*"
+      MSAN_OPTIONS: "halt_on_error=1:exit_code=86:symbolize=1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang libc++-dev libc++abi-dev
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Configure
+        run: cmake --preset linux-clang-debug-msan
+      - name: Build
+        run: cmake --build --preset linux-clang-debug-msan
+      - name: Test
+        run: ctest --preset linux-clang-test-msan --output-on-failure
 
   sanitizers-macos:
     name: "Sanitizer · ${{ matrix.test }}"
