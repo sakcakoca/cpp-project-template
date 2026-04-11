@@ -16,6 +16,7 @@ target_link_libraries(${TEST_EXECUTABLE_NAME} PRIVATE myproject_library GTest::g
 
 # Discover tests for ctest
 include(GoogleTest)
-gtest_discover_tests(${TEST_EXECUTABLE_NAME}
-  DISCOVERY_MODE POST_BUILD
+gtest_add_tests(
+  TARGET ${TEST_EXECUTABLE_NAME}
+  SOURCES myproject_test.cpp
 )
