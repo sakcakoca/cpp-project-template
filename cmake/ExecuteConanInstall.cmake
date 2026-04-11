@@ -77,6 +77,11 @@ else()
   if(DEFINED ENV{CONAN_CONF_APPLE_SDK_PATH})
     list(APPEND _CONAN_HOST_CONF "--conf=tools.apple:sdk_path=$ENV{CONAN_CONF_APPLE_SDK_PATH}")
   endif()
+  if(DEFINED ENV{CONAN_CONF_CMAKE_TOOLCHAIN_GENERATOR})
+    list(APPEND _CONAN_HOST_CONF "--conf=tools.cmake.cmaketoolchain:generator=$ENV{CONAN_CONF_CMAKE_TOOLCHAIN_GENERATOR}")
+  elseif(CMAKE_GENERATOR)
+    list(APPEND _CONAN_HOST_CONF "--conf=tools.cmake.cmaketoolchain:generator=${CMAKE_GENERATOR}")
+  endif()
 
   get_conan_sanitizer_conf(_CONAN_SAN_CONF)
 

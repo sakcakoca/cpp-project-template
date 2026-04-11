@@ -15,7 +15,8 @@
       "environment": {
         "CONAN_HOST_PROFILE": "default",
         "CONAN_BUILD_PROFILE": "default",
-        "CONAN_SETTING_COMPILER_CPPSTD": "23"
+        "CONAN_SETTING_COMPILER_CPPSTD": "23",
+        "CONAN_CONF_CMAKE_TOOLCHAIN_GENERATOR": "Ninja"
       }
     },
     { "name": "cfg-debug", "hidden": true, "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
