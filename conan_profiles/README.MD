@@ -32,6 +32,12 @@ Edit the relevant profile file and change `compiler.version=XX` accordingly.
 - If your Homebrew GCC version differs from 15, update both the profile and
   the compiler paths in the CMake preset (via `CMakeUserPresets.json`).
 
+## Windows MSYS2 Notes
+
+- If you are using MSYS2's MINGW64 environment then for `clang` prefer using `win-msys2-clang-libstdc++` profile.
+- If you are using MSYS2's MINGW64 environment thenfor `clang` prefer using `win-msys2-clang` profile with `libc++`.
+- On clang MINGW64 environment, there is no sanitizer support yet.
+
 ### Adding a new profile
 
 Copy an existing profile, update the settings, and reference it from a new

@@ -135,6 +135,13 @@ cmake --build --preset win-msvc-debug
 ctest --preset win-msvc-test
 ```
 
+**Note:** On Linux environment, you may need `libc++` compiled with *memory sanitizer* for `linux-clang-debug-msan` build.
+
+**Note:** On Windows MSYS2 environment, you can choose between `win-msys2-clang-libstdc++-debug` 
+and `win-msys2-clang-debug` depending on which environment you use with MSYS2: MINGW64 or CLANG64.
+
+**Note:** If you are switch between sanitized and non-sanitized builds then you may need to clean up conan cache and build: `conan remove -c "*"` and `conan cache clean *`
+
 ### 3. Release builds
 
 Replace `-debug` with `-release` or `-relwithdebinfo`:
@@ -188,7 +195,16 @@ cmake --build --preset linux-gcc-debug
 ctest --test-dir build/linux-gcc-debug -T memcheck --output-on-failure
 ```
 
+## Leaks Check (MacOS only)
+
+On MacOS `valgrind` is not available but `leaks` tool can be used with the test executable instead of running `ctest`:
+
+```bash
+MallocStackLogging=1 leaks --atExit -- ./build/macos-gcc-debug/test/MyProjectTest
+```
+
 ---
+
 
 ## Doxygen Documentation
 
@@ -350,6 +366,7 @@ presets.
 │   ├── macos-clang
 │   ├── win-msys2-gcc
 │   ├── win-msys2-clang
+│   ├── win-msys2-clang-libstdc++
 │   ├── win-msvc
 │   └── README.MD
 ├── include/                    # Public headers (namespaced)

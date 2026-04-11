@@ -101,6 +101,12 @@ jobs:
             test: win-msys2-gcc-test
             msystem: MINGW64
             msys_packages: mingw-w64-x86_64-gcc mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip
+          - preset: win-msys2-clang-libstdc++
+            configure: win-msys2-clang-libstdc++-debug
+            build: win-msys2-clang-libstdc++-debug
+            test: win-msys2-clang-libstdc++-test
+            msystem: MINGW64
+            msys_packages: mingw-w64-x86_64-clang mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake mingw-w64-x86_64-python-pip
           - preset: win-msys2-clang
             configure: win-msys2-clang-debug
             build: win-msys2-clang-debug
