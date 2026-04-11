@@ -31,77 +31,126 @@ option(ENABLE_SANITIZER_LEAK      "Enable LeakSanitizer (Linux GCC/Clang)"      
 option(ENABLE_SANITIZER_THREAD    "Enable ThreadSanitizer"                         OFF)
 option(ENABLE_SANITIZER_MEMORY    "Enable MemorySanitizer (Clang only)"            OFF)
 
-function(enable_sanitizers target_name)
-  # Collect the sanitiser names requested
+function(_sanitizers_detect_compilers out_is_msvc out_is_clang)
+  set(_is_msvc OFF)
+  set(_is_clang OFF)
+
+  if(MSVC
+     OR CMAKE_C_COMPILER MATCHES "cl(\\.exe)?$"
+     OR CMAKE_CXX_COMPILER MATCHES "cl(\\.exe)?$")
+    set(_is_msvc ON)
+  endif()
+
+  if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang"
+     OR CMAKE_C_COMPILER MATCHES "clang(-[0-9]+)?(\\.exe)?$"
+     OR CMAKE_CXX_COMPILER MATCHES "clang\\+\\+(-[0-9]+)?(\\.exe)?$")
+    set(_is_clang ON)
+  endif()
+
+  set(${out_is_msvc} ${_is_msvc} PARENT_SCOPE)
+  set(${out_is_clang} ${_is_clang} PARENT_SCOPE)
+endfunction()
+
+function(collect_enabled_sanitizers out_var)
+  _sanitizers_detect_compilers(_is_msvc _is_clang)
+
   set(_sanitizers "")
 
-  # ── AddressSanitizer ────────────────────────────────────────────────────
   if(ENABLE_SANITIZER_ADDRESS)
     list(APPEND _sanitizers "address")
   endif()
 
-  # ── UndefinedBehaviorSanitizer ──────────────────────────────────────────
   if(ENABLE_SANITIZER_UNDEFINED)
-    if(MSVC)
+    if(_is_msvc)
       message(WARNING
-        "[Sanitizers] MSVC does not support UndefinedBehaviorSanitizer — skipping")
+        "[Sanitizers] MSVC does not support UndefinedBehaviorSanitizer - skipping")
     else()
       list(APPEND _sanitizers "undefined")
     endif()
   endif()
 
-  # ── LeakSanitizer ──────────────────────────────────────────────────────
   if(ENABLE_SANITIZER_LEAK)
-    if(MSVC)
+    if(_is_msvc)
       message(WARNING
-        "[Sanitizers] MSVC does not support LeakSanitizer — skipping")
+        "[Sanitizers] MSVC does not support LeakSanitizer - skipping")
     elseif(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
       message(WARNING
-        "[Sanitizers] LeakSanitizer is only reliable on Linux — skipping")
+        "[Sanitizers] LeakSanitizer is only reliable on Linux - skipping")
     else()
       list(APPEND _sanitizers "leak")
     endif()
   endif()
 
-  # ── ThreadSanitizer (exclusive) ─────────────────────────────────────────
   if(ENABLE_SANITIZER_THREAD)
-    if("address" IN_LIST _sanitizers)
+    if("address" IN_LIST _sanitizers OR "leak" IN_LIST _sanitizers)
       message(FATAL_ERROR
-        "[Sanitizers] ThreadSanitizer is incompatible with AddressSanitizer")
+        "[Sanitizers] ThreadSanitizer is incompatible with Address/LeakSanitizer")
     endif()
-    if("leak" IN_LIST _sanitizers)
-      message(FATAL_ERROR
-        "[Sanitizers] ThreadSanitizer is incompatible with LeakSanitizer")
-    endif()
-    if(MSVC)
+    if(_is_msvc)
       message(WARNING
-        "[Sanitizers] MSVC does not support ThreadSanitizer — skipping")
+        "[Sanitizers] MSVC does not support ThreadSanitizer - skipping")
     else()
       list(APPEND _sanitizers "thread")
     endif()
   endif()
 
-  # ── MemorySanitizer (Clang only, exclusive) ─────────────────────────────
   if(ENABLE_SANITIZER_MEMORY)
-    if("address" IN_LIST _sanitizers)
+    if("address" IN_LIST _sanitizers OR "thread" IN_LIST _sanitizers OR "leak" IN_LIST _sanitizers)
       message(FATAL_ERROR
-        "[Sanitizers] MemorySanitizer is incompatible with AddressSanitizer")
+        "[Sanitizers] MemorySanitizer is incompatible with Address/Thread/LeakSanitizer")
     endif()
-    if("thread" IN_LIST _sanitizers)
-      message(FATAL_ERROR
-        "[Sanitizers] MemorySanitizer is incompatible with ThreadSanitizer")
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      message(FATAL_ERROR "[Sanitizers] MemorySanitizer is supported on Linux only")
     endif()
-    if("leak" IN_LIST _sanitizers)
-      message(FATAL_ERROR
-        "[Sanitizers] MemorySanitizer is incompatible with LeakSanitizer")
-    endif()
-    if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+    if(NOT _is_clang)
       message(FATAL_ERROR
         "[Sanitizers] MemorySanitizer requires Clang "
-        "(found ${CMAKE_CXX_COMPILER_ID})")
+        "(found ${CMAKE_CXX_COMPILER_ID} / ${CMAKE_CXX_COMPILER})")
     endif()
     list(APPEND _sanitizers "memory")
   endif()
+
+  set(${out_var} "${_sanitizers}" PARENT_SCOPE)
+endfunction()
+
+function(get_conan_sanitizer_conf out_var)
+  collect_enabled_sanitizers(_sanitizers)
+  _sanitizers_detect_compilers(_is_msvc _is_clang)
+
+  set(_conf "")
+  if(NOT _sanitizers)
+    set(${out_var} "" PARENT_SCOPE)
+    return()
+  endif()
+
+  if(_is_msvc)
+    if("address" IN_LIST _sanitizers)
+      set(_conf
+        "--conf=tools.build:cflags+=[\"/fsanitize=address\"]"
+        "--conf=tools.build:cxxflags+=[\"/fsanitize=address\"]"
+        "--conf=tools.build:exelinkflags+=[\"/fsanitize=address\"]"
+        "--conf=tools.build:sharedlinkflags+=[\"/fsanitize=address\"]"
+      )
+      message(STATUS "[Conan] Sanitizer flags: /fsanitize=address")
+    endif()
+  else()
+    list(JOIN _sanitizers "," _san_joined)
+    set(_san_flags "-fsanitize=${_san_joined} -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+    set(_conf
+      "--conf=tools.build:cflags+=[\"${_san_flags}\"]"
+      "--conf=tools.build:cxxflags+=[\"${_san_flags}\"]"
+      "--conf=tools.build:exelinkflags+=[\"-fsanitize=${_san_joined}\"]"
+      "--conf=tools.build:sharedlinkflags+=[\"-fsanitize=${_san_joined}\"]"
+    )
+    message(STATUS "[Conan] Sanitizer flags: -fsanitize=${_san_joined}")
+  endif()
+
+  set(${out_var} "${_conf}" PARENT_SCOPE)
+endfunction()
+
+function(enable_sanitizers target_name)
+  collect_enabled_sanitizers(_sanitizers)
+  _sanitizers_detect_compilers(_is_msvc _is_clang)
 
   # ── Apply flags ─────────────────────────────────────────────────────────
   list(LENGTH _sanitizers _san_count)
@@ -109,7 +158,7 @@ function(enable_sanitizers target_name)
     return()
   endif()
 
-  if(MSVC)
+  if(_is_msvc)
     # MSVC only supports /fsanitize=address
     if("address" IN_LIST _sanitizers)
       target_compile_options(${target_name} INTERFACE /fsanitize=address)
@@ -137,42 +186,15 @@ endfunction()
 # add_compile_options / add_link_options. No per-target linking needed.
 # ─────────────────────────────────────────────────────────────────────────────
 function(enable_sanitizers_global)
-  # Re-use the same option checks
-  set(_sanitizers "")
-
-  if(ENABLE_SANITIZER_ADDRESS)
-    list(APPEND _sanitizers "address")
-  endif()
-  if(ENABLE_SANITIZER_UNDEFINED AND NOT MSVC)
-    list(APPEND _sanitizers "undefined")
-  endif()
-  if(ENABLE_SANITIZER_LEAK AND NOT MSVC AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND _sanitizers "leak")
-  endif()
-  if(ENABLE_SANITIZER_THREAD)
-    if("address" IN_LIST _sanitizers OR "leak" IN_LIST _sanitizers)
-      message(FATAL_ERROR "[Sanitizers] ThreadSanitizer is incompatible with ASan/LSan")
-    endif()
-    if(NOT MSVC)
-      list(APPEND _sanitizers "thread")
-    endif()
-  endif()
-  if(ENABLE_SANITIZER_MEMORY)
-    if("address" IN_LIST _sanitizers OR "thread" IN_LIST _sanitizers OR "leak" IN_LIST _sanitizers)
-      message(FATAL_ERROR "[Sanitizers] MemorySanitizer is incompatible with ASan/TSan/LSan")
-    endif()
-    if(NOT CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-      message(FATAL_ERROR "[Sanitizers] MemorySanitizer requires Clang")
-    endif()
-    list(APPEND _sanitizers "memory")
-  endif()
+  collect_enabled_sanitizers(_sanitizers)
+  _sanitizers_detect_compilers(_is_msvc _is_clang)
 
   list(LENGTH _sanitizers _san_count)
   if(_san_count EQUAL 0)
     return()
   endif()
 
-  if(MSVC)
+  if(_is_msvc)
     if("address" IN_LIST _sanitizers)
       add_compile_options(/fsanitize=address /Zi)
       add_link_options(/DEBUG)

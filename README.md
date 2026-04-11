@@ -135,10 +135,9 @@ cmake --build --preset win-msvc-debug
 ctest --preset win-msvc-test
 ```
 
-**Note:** On Linux environment, you may need `libc++` compiled with *memory sanitizer* for `linux-clang-debug-msan` build.
+**Note:** `linux-clang-debug-msan` is configured to use `libc++` and requires an MSan-compatible libc++ toolchain.
 
-**Note:** On Windows MSYS2 environment, you can choose between `win-msys2-clang-libstdc++-debug` 
-and `win-msys2-clang-debug` depending on which environment you use with MSYS2: MINGW64 or CLANG64.
+**Note:** On Windows MSYS2 environment, use `win-msys2-clang-libstdc++-debug` for MINGW64 and `win-msys2-clang-debug` for CLANG64.
 
 **Note:** If you are switch between sanitized and non-sanitized builds then you may need to clean up conan cache and build: `conan remove -c "*"` and `conan cache clean *`
 
@@ -200,7 +199,11 @@ ctest --test-dir build/linux-gcc-debug -T memcheck --output-on-failure
 On MacOS `valgrind` is not available but `leaks` tool can be used with the test executable instead of running `ctest`:
 
 ```bash
+# macOS GCC Debug
 MallocStackLogging=1 leaks --atExit -- ./build/macos-gcc-debug/test/MyProjectTest
+
+# macOS Clang Debug
+MallocStackLogging=1 leaks --atExit -- ./build/macos-clang-debug/test/MyProjectTest
 ```
 
 ---
@@ -317,8 +320,9 @@ Everything else (cmake modules, presets, conan profiles, CI pipelines,
 
 ### Conan profiles
 
-Update `compiler.version` in the relevant `conan_profiles/*` files to match
-your installed compiler versions. See `conan_profiles/README.MD` for details.
+Compiler and Conan toolchain settings are owned by `CMakePresets.json`.
+Profiles in `conan_profiles/` only keep stable platform baseline settings.
+See `conan_profiles/README.MD` for details.
 
 ---
 
@@ -328,8 +332,8 @@ Three pipeline configurations are included — all pre-configured and ready to u
 
 | File | Platform | What it tests |
 |------|----------|---------------|
-| `.github/workflows/ci.yml` | Linux, macOS, Windows | Tests, Valgrind, Sanitizers |
-| `.travis.yml` | Linux, macOS | Tests, Valgrind, Sanitizers |
+| `.github/workflows/ci.yml` | Linux, macOS, Windows | Tests, Valgrind, Leaks, Sanitizers |
+| `.travis.yml` | Linux, macOS | Tests, Valgrind, Leaks, Sanitizers |
 | `appveyor.yml` | Windows | Tests, Sanitizers |
 
 No changes needed in pipeline files for a new project — they use the same CMake
@@ -360,13 +364,9 @@ presets.
 │   ├── Sanitizers.cmake
 │   └── StandardProjectSettings.cmake
 ├── conan_profiles/             # Platform-specific Conan profiles
-│   ├── linux-gcc
-│   ├── linux-clang
-│   ├── macos-gcc
-│   ├── macos-clang
-│   ├── win-msys2-gcc
-│   ├── win-msys2-clang
-│   ├── win-msys2-clang-libstdc++
+│   ├── linux
+│   ├── macos
+│   ├── win-msys2
 │   ├── win-msvc
 │   └── README.MD
 ├── include/                    # Public headers (namespaced)

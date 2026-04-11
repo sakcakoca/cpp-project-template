@@ -1,18 +1,6 @@
-# Conan 2 profile: Windows + MSVC (Visual Studio 2022)
-# Adjust compiler.version to match your VS version:
-#   193 = VS 2022 (17.0-17.9)
-#   194 = VS 2022 (17.10+)
-# Run "cl" in a Developer Command Prompt to check.
+# Conan 2 profile: Windows MSVC baseline
+# Compiler, version, runtime, and executable selections are owned by CMake presets.
 
 [settings]
 os=Windows
 arch=x86_64
-compiler=msvc
-compiler.version=194
-compiler.runtime=dynamic
-compiler.cppstd=23
-build_type=Release
-
-[conf]
-tools.build:compiler_executables={"c": "cl", "cpp": "cl"}
-tools.cmake.cmaketoolchain:generator=Ninja

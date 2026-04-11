@@ -1,0 +1,7 @@
+# Conan 2 profile: macOS baseline
+# Compiler, version, libcxx, SDK path, and executable selections are owned by CMake presets.
+
+[settings]
+os=Macos
+arch=armv8
+

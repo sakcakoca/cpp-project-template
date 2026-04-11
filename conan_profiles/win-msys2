@@ -1,0 +1,7 @@
+# Conan 2 profile: Windows MSYS2 baseline
+# Compiler, version, libcxx, and executable selections are owned by CMake presets.
+
+[settings]
+os=Windows
+arch=x86_64
+

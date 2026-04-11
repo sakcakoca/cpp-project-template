@@ -4,7 +4,8 @@
 # Stages:
 #   1. test          — plain tests (no sanitizers, all platforms)
 #   2. valgrind      — plain debug builds + ctest memcheck (Linux only)
-#   3. sanitizers    — sanitizer-enabled tests (platform-dependent)
+#   3. leaks         — plain debug builds + leaks check (macOS only)
+#   4. sanitizers    — sanitizer-enabled tests (platform-dependent)
 # ─────────────────────────────────────────────────────────────────────────────
 name: CI
 
@@ -189,6 +190,40 @@ jobs:
       - name: Valgrind memcheck
         run: ctest --test-dir build/${{ matrix.configure }} -T memcheck --output-on-failure
 
+  leaks-macos:
+    name: "Leaks · ${{ matrix.preset }}"
+    needs: test-macos
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - preset: macos-gcc
+            configure: macos-gcc-debug
+            build: macos-gcc-debug
+            brew_packages: gcc ninja cmake conan
+          - preset: macos-clang
+            configure: macos-clang-debug
+            build: macos-clang-debug
+            brew_packages: llvm ninja cmake conan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode (runner default)
+        run: |
+          sudo xcode-select -s "$(xcode-select -p)"
+          xcodebuild -version
+      - name: Install Homebrew packages
+        run: brew install ${{ matrix.brew_packages }}
+      - name: Install Conan
+        run: |
+          conan profile detect
+      - name: Configure
+        run: cmake --preset ${{ matrix.configure }} -DCMAKE_OSX_SYSROOT=$(xcrun --show-sdk-path)
+      - name: Build
+        run: cmake --build --preset ${{ matrix.build }}
+      - name: Leaks check
+        run: MallocStackLogging=1 leaks --atExit -- ./build/${{ matrix.configure }}/test/MyProjectTest
+
   # ───────────────────────────────────────────────────────────────────────────
   # Stage 3: Sanitizer tests
   # ───────────────────────────────────────────────────────────────────────────
@@ -226,6 +261,10 @@ jobs:
             build: linux-clang-debug-lsan
             test: linux-clang-test-lsan
             packages: clang
+          - configure: linux-clang-debug-msan
+            build: linux-clang-debug-msan
+            test: linux-clang-test-msan
+            packages: clang libc++-dev libc++abi-dev
     steps:
       - uses: actions/checkout@v4
       - name: Install system packages

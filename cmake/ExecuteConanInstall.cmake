@@ -11,8 +11,12 @@
 # Environment variables (typically set by CMake presets):
 #   CONAN_HOST_PROFILE  - path to host profile   (default: "default")
 #   CONAN_BUILD_PROFILE - path to build profile   (default: "default")
+#   CONAN_SETTING_*     - optional host settings passed to Conan (-s:h)
+#   CONAN_CONF_*        - optional host conf values passed to Conan (--conf)
 # ─────────────────────────────────────────────────────────────────────────────
 include_guard(GLOBAL)
+
+include("${CMAKE_CURRENT_LIST_DIR}/Sanitizers.cmake")
 
 option(SKIP_CONAN_INSTALL
   "Skip the automatic conan install step (use when running conan manually)" OFF)
@@ -46,57 +50,35 @@ else()
     set(_BUILD_PROFILE "default")
   endif()
 
-
-  # ── Detect enabled sanitizers and construct flags for Conan ─────────────
-  set(_CONAN_SAN_CONF "")
-  set(_IS_MSVC OFF)
-
-  if(MSVC OR (CMAKE_C_COMPILER MATCHES "cl(\\.exe)?$") OR (CMAKE_CXX_COMPILER MATCHES "cl(\\.exe)?$"))
-    set(_IS_MSVC ON)
+  # ── Resolve Conan host settings from preset-provided environment ───────
+  set(_CONAN_HOST_SETTINGS "")
+  if(DEFINED ENV{CONAN_SETTING_COMPILER})
+    list(APPEND _CONAN_HOST_SETTINGS "-s:h" "compiler=$ENV{CONAN_SETTING_COMPILER}")
+  endif()
+  if(DEFINED ENV{CONAN_SETTING_COMPILER_VERSION})
+    list(APPEND _CONAN_HOST_SETTINGS "-s:h" "compiler.version=$ENV{CONAN_SETTING_COMPILER_VERSION}")
+  endif()
+  if(DEFINED ENV{CONAN_SETTING_COMPILER_LIBCXX})
+    list(APPEND _CONAN_HOST_SETTINGS "-s:h" "compiler.libcxx=$ENV{CONAN_SETTING_COMPILER_LIBCXX}")
+  endif()
+  if(DEFINED ENV{CONAN_SETTING_COMPILER_RUNTIME})
+    list(APPEND _CONAN_HOST_SETTINGS "-s:h" "compiler.runtime=$ENV{CONAN_SETTING_COMPILER_RUNTIME}")
+  endif()
+  if(DEFINED ENV{CONAN_SETTING_COMPILER_CPPSTD})
+    list(APPEND _CONAN_HOST_SETTINGS "-s:h" "compiler.cppstd=$ENV{CONAN_SETTING_COMPILER_CPPSTD}")
+  elseif(CMAKE_CXX_STANDARD)
+    list(APPEND _CONAN_HOST_SETTINGS "-s:h" "compiler.cppstd=${CMAKE_CXX_STANDARD}")
   endif()
 
-  if(_IS_MSVC)
-    # Only AddressSanitizer is supported on MSVC, and only with /fsanitize=address
-    if(ENABLE_SANITIZER_ADDRESS)
-      set(_CONAN_SAN_CONF
-        "--conf=tools.build:cflags+=[\"/fsanitize=address\"]"
-        "--conf=tools.build:cxxflags+=[\"/fsanitize=address\"]"
-        "--conf=tools.build:exelinkflags+=[\"/fsanitize=address\"]"
-        "--conf=tools.build:sharedlinkflags+=[\"/fsanitize=address\"]"
-      )
-      message(STATUS "[Conan] MSVC AddressSanitizer flags enabled: /fsanitize=address")
-    endif()
-    # No other sanitizer is supported on MSVC
-  else()
-    set(_SANITIZER_LIST "")
-    if(ENABLE_SANITIZER_ADDRESS)
-      list(APPEND _SANITIZER_LIST "address")
-    endif()
-    if(ENABLE_SANITIZER_UNDEFINED)
-      list(APPEND _SANITIZER_LIST "undefined")
-    endif()
-    if(ENABLE_SANITIZER_LEAK)
-      list(APPEND _SANITIZER_LIST "leak")
-    endif()
-    if(ENABLE_SANITIZER_THREAD)
-      list(APPEND _SANITIZER_LIST "thread")
-    endif()
-    if(ENABLE_SANITIZER_MEMORY)
-      list(APPEND _SANITIZER_LIST "memory")
-    endif()
-
-    if(_SANITIZER_LIST)
-      list(JOIN _SANITIZER_LIST "," _SANITIZER_JOINED)
-      set(_SANITIZER_FLAGS "-fsanitize=${_SANITIZER_JOINED} -fno-omit-frame-pointer")
-      set(_CONAN_SAN_CONF
-        "--conf=tools.build:cflags+=[\"${_SANITIZER_FLAGS}\"]"
-        "--conf=tools.build:cxxflags+=[\"${_SANITIZER_FLAGS}\"]"
-        "--conf=tools.build:exelinkflags+=[\"-fsanitize=${_SANITIZER_JOINED}\"]"
-        "--conf=tools.build:sharedlinkflags+=[\"-fsanitize=${_SANITIZER_JOINED}\"]"
-      )
-      message(STATUS "[Conan] Sanitizer flags detected: ${_SANITIZER_FLAGS}")
-    endif()
+  set(_CONAN_HOST_CONF "")
+  if(DEFINED ENV{CONAN_CONF_COMPILER_EXECUTABLES})
+    list(APPEND _CONAN_HOST_CONF "--conf=tools.build:compiler_executables=$ENV{CONAN_CONF_COMPILER_EXECUTABLES}")
   endif()
+  if(DEFINED ENV{CONAN_CONF_APPLE_SDK_PATH})
+    list(APPEND _CONAN_HOST_CONF "--conf=tools.apple:sdk_path=$ENV{CONAN_CONF_APPLE_SDK_PATH}")
+  endif()
+
+  get_conan_sanitizer_conf(_CONAN_SAN_CONF)
 
   execute_process(
     COMMAND "${_CONAN_EXE}" --version
@@ -136,6 +118,12 @@ else()
   message(STATUS "[Conan] Host profile : ${_HOST_PROFILE}")
   message(STATUS "[Conan] Build profile: ${_BUILD_PROFILE}")
   message(STATUS "[Conan] Build type   : ${CMAKE_BUILD_TYPE}")
+  if(_CONAN_HOST_SETTINGS)
+    message(STATUS "[Conan] Extra host settings enabled from presets")
+  endif()
+  if(_CONAN_HOST_CONF)
+    message(STATUS "[Conan] Extra host conf enabled from presets")
+  endif()
 
   # ── Run conan install ──────────────────────────────────────────────────
   execute_process(
@@ -145,6 +133,8 @@ else()
       "-pr:h" "${_HOST_PROFILE}"
       "-pr:b" "${_BUILD_PROFILE}"
       "-s:h"  "build_type=${CMAKE_BUILD_TYPE}"
+      ${_CONAN_HOST_SETTINGS}
+      ${_CONAN_HOST_CONF}
       ${_CONAN_SAN_CONF}
     RESULT_VARIABLE _CONAN_RC
   )

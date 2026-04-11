@@ -6,7 +6,8 @@
 # Stages:
 #   1. test          — plain tests (no sanitizers)
 #   2. valgrind      — plain debug builds + ctest memcheck (Linux only)
-#   3. sanitizers    — sanitizer-enabled tests
+#   3. leaks         — plain debug builds + leaks check (macOS only)
+#   4. sanitizers    — sanitizer-enabled tests
 # ─────────────────────────────────────────────────────────────────────────────
 language: cpp
 
@@ -44,12 +45,18 @@ _macos_build_and_test: &macos_build_and_test
   - cmake --build --preset ${BUILD_PRESET}
   - ctest --preset ${TEST_PRESET}
 
+_macos_build_and_leaks: &macos_build_and_leaks
+  - cmake --preset ${CONFIGURE_PRESET} -DCMAKE_OSX_SYSROOT=$(xcrun --show-sdk-path)
+  - cmake --build --preset ${BUILD_PRESET}
+  - MallocStackLogging=1 leaks --atExit -- ./build/${CONFIGURE_PRESET}/test/MyProjectTest
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Build stages — run in order, each stage's jobs run in parallel
 # ─────────────────────────────────────────────────────────────────────────────
 stages:
   - name: test
   - name: valgrind
+  - name: leaks
   - name: sanitizers
 
 jobs:
@@ -131,7 +138,30 @@ jobs:
       script: *build_and_valgrind
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Stage 3: Sanitizer tests
+    # Stage 3: Leaks checks (macOS only, no sanitizers)
+    # ─────────────────────────────────────────────────────────────────────────
+    # macOS GCC + leaks
+    - stage: leaks
+      name: "Leaks · macos-gcc"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="gcc ninja cmake conan"
+        - CONFIGURE_PRESET=macos-gcc-debug
+        - BUILD_PRESET=macos-gcc-debug
+      script: *macos_build_and_leaks
+
+    # macOS Clang + leaks
+    - stage: leaks
+      name: "Leaks · macos-clang"
+      <<: *macos_setup
+      env:
+        - BREW_PACKAGES="llvm ninja cmake conan"
+        - CONFIGURE_PRESET=macos-clang-debug
+        - BUILD_PRESET=macos-clang-debug
+      script: *macos_build_and_leaks
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Stage 4: Sanitizer tests
     # ─────────────────────────────────────────────────────────────────────────
     # Linux GCC — ASan + UBSan
     - stage: sanitizers

@@ -1,44 +1,36 @@
 # Conan Profiles
 
-Project-local Conan 2 host profiles for each supported platform/compiler.
+Project-local Conan 2 host profiles are now platform baselines only.
+
+Compiler, compiler version, C++ library (`compiler.libcxx`), runtime, SDK path,
+and compiler executables are configured in `CMakePresets.json` and passed to
+Conan through preset environment variables.
+
+## Available profiles
+
+- `conan_profiles/linux`
+- `conan_profiles/macos`
+- `conan_profiles/win-msys2`
+- `conan_profiles/win-msvc`
 
 ## Usage
 
-Profiles are used automatically by CMake presets via the `CONAN_HOST_PROFILE`
-environment variable. You can also reference them manually:
+Profiles are used automatically by CMake presets via `CONAN_HOST_PROFILE`.
+
+Manual example:
 
 ```bash
 conan install . --output-folder=build/linux-gcc-debug \
-  --build=missing -pr:h conan_profiles/linux-gcc -s build_type=Debug
+  --build=missing \
+  -pr:h conan_profiles/linux \
+  -s:h build_type=Debug \
+  -s:h compiler=gcc \
+  -s:h compiler.version=15 \
+  -s:h compiler.libcxx=libstdc++11
 ```
 
-## Customisation
+## Customization
 
-Each profile specifies `compiler.version` with a common default. Update it to
-match your installed compiler:
-
-```bash
-gcc --version          # Check GCC version
-clang --version        # Check Clang version
-```
-
-Edit the relevant profile file and change `compiler.version=XX` accordingly.
-
-### macOS Notes
-
-- Profiles default to Apple Silicon (`arch=armv8`). For Intel Macs, change to
-  `arch=x86_64` and update compiler paths from `/opt/homebrew/` to
-  `/usr/local/`.
-- If your Homebrew GCC version differs from 15, update both the profile and
-  the compiler paths in the CMake preset (via `CMakeUserPresets.json`).
-
-## Windows MSYS2 Notes
-
-- If you are using MSYS2's MINGW64 environment then for `clang` prefer using `win-msys2-clang-libstdc++` profile.
-- If you are using MSYS2's MINGW64 environment thenfor `clang` prefer using `win-msys2-clang` profile with `libc++`.
-- On clang MINGW64 environment, there is no sanitizer support yet.
-
-### Adding a new profile
-
-Copy an existing profile, update the settings, and reference it from a new
-CMake preset via the `CONAN_HOST_PROFILE` environment variable.
+- Update compiler/toolchain values in `CMakePresets.json`.
+- Keep profile files focused on stable host baseline properties (such as
+  `os` and `arch`).

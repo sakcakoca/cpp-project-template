@@ -1,0 +1,7 @@
+# Conan 2 profile: Linux baseline
+# Compiler, version, libcxx, and executable selections are owned by CMake presets.
+
+[settings]
+os=Linux
+arch=x86_64
+

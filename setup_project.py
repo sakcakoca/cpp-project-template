@@ -172,17 +172,15 @@ class CppStandardUpdater:
     # Files that contain C++ standard references.
     _FILES = (
         "CMakeLists.txt",
+        "CMakePresets.json",
         "src/CMakeLists.txt",
         "apps/CMakeLists.txt",
         "test/CMakeLists.txt",
         "cmake/CompilerWarnings.cmake",
         "README.md",
-        "conan_profiles/linux-gcc",
-        "conan_profiles/linux-clang",
-        "conan_profiles/macos-gcc",
-        "conan_profiles/macos-clang",
-        "conan_profiles/win-msys2-gcc",
-        "conan_profiles/win-msys2-clang",
+        "conan_profiles/linux",
+        "conan_profiles/macos",
+        "conan_profiles/win-msys2",
         "conan_profiles/win-msvc",
     )
 
@@ -198,6 +196,7 @@ class CppStandardUpdater:
         self._replacements = [
             (f"cxx_std_{self._old}",            f"cxx_std_{self._new}"),
             (f"compiler.cppstd={self._old}",    f"compiler.cppstd={self._new}"),
+            (f"CONAN_SETTING_COMPILER_CPPSTD\": \"{self._old}\"", f"CONAN_SETTING_COMPILER_CPPSTD\": \"{self._new}\""),
             (f"CMAKE_CXX_STANDARD {self._old}", f"CMAKE_CXX_STANDARD {self._new}"),
             (f"C++{self._old}",                 f"C++{self._new}"),
         ]

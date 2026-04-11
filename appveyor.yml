@@ -28,11 +28,21 @@ environment:
     # MSYS2 Clang
     - JOB_NAME: "Test · win-msys2-clang"
       JOB_GROUP: test
-      MSYSTEM: MINGW64
-      MSYS_PACKAGES: mingw-w64-x86_64-clang mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake
+      MSYSTEM: CLANG64
+      MSYS_PACKAGES: mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-cmake
       CONFIGURE_PRESET: win-msys2-clang-debug
       BUILD_PRESET: win-msys2-clang-debug
       TEST_PRESET: win-msys2-clang-test
+      USE_MSYS2: "true"
+
+    # MSYS2 Clang (libstdc++)
+    - JOB_NAME: "Test · win-msys2-clang-libstdc++"
+      JOB_GROUP: test
+      MSYSTEM: MINGW64
+      MSYS_PACKAGES: mingw-w64-x86_64-clang mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake
+      CONFIGURE_PRESET: win-msys2-clang-libstdc++-debug
+      BUILD_PRESET: win-msys2-clang-libstdc++-debug
+      TEST_PRESET: win-msys2-clang-libstdc++-test
       USE_MSYS2: "true"
 
     # MSVC
@@ -48,8 +58,8 @@ environment:
     # MSYS2 Clang — ASan
     - JOB_NAME: "Sanitizer · win-msys2-clang-test-asan"
       JOB_GROUP: sanitizers
-      MSYSTEM: MINGW64
-      MSYS_PACKAGES: mingw-w64-x86_64-clang mingw-w64-x86_64-ninja mingw-w64-x86_64-cmake
+      MSYSTEM: CLANG64
+      MSYS_PACKAGES: mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-cmake
       CONFIGURE_PRESET: win-msys2-clang-debug-asan
       BUILD_PRESET: win-msys2-clang-debug-asan
       TEST_PRESET: win-msys2-clang-test-asan
