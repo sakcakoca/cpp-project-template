@@ -1,8 +1,7 @@
 # C++ Project Template
 
 A cross-platform C++23 project template with CMake presets, Conan 2, sanitizers,
-Valgrind, Doxygen, PVS-Studio, clang-tidy, and CI for GitHub Actions, Travis CI,
-and AppVeyor.
+Valgrind, Doxygen, PVS-Studio, clang-tidy, and CI for GitHub Actions.
 
 ---
 
@@ -333,8 +332,6 @@ Three pipeline configurations are included — all pre-configured and ready to u
 | File | Platform | What it tests |
 |------|----------|---------------|
 | `.github/workflows/ci.yml` | Linux, macOS, Windows | Tests, Valgrind, Leaks, Sanitizers |
-| `.travis.yml` | Linux, macOS | Tests, Valgrind, Leaks, Sanitizers |
-| `appveyor.yml` | Windows | Tests, Sanitizers |
 
 No changes needed in pipeline files for a new project — they use the same CMake
 presets.
@@ -352,8 +349,7 @@ presets.
 ├── .clang-tidy                 # clang-tidy configuration
 ├── .gitignore
 ├── .github/workflows/ci.yml   # GitHub Actions CI
-├── .travis.yml                 # Travis CI
-├── appveyor.yml                # AppVeyor CI
+├── .github/workflows/resolve_test_executable.py # Helper for GH Action
 ├── cmake/                      # CMake modules (reusable, no changes needed)
 │   ├── CompilerWarnings.cmake
 │   ├── ExecuteConanInstall.cmake
