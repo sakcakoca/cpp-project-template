@@ -446,6 +446,22 @@ jobs:
             --template=gcc \
             2> build/linux-gcc-debug/static-analysis/cppcheck.txt
 
+      - name: Print cppcheck reports to job output
+        run: |
+          echo "--- cppcheck human-readable report ---"
+          if [ -f build/linux-gcc-debug/static-analysis/cppcheck.txt ]; then
+            cat build/linux-gcc-debug/static-analysis/cppcheck.txt
+          else
+            echo "cppcheck.txt not found"
+          fi
+
+          echo "--- cppcheck XML run diagnostics (stderr) ---"
+          if [ -f build/linux-gcc-debug/static-analysis/cppcheck.stderr.txt ]; then
+            cat build/linux-gcc-debug/static-analysis/cppcheck.stderr.txt
+          else
+            echo "cppcheck.stderr.txt not found"
+          fi
+
       - name: Upload cppcheck artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -528,6 +544,34 @@ jobs:
           if [ -f build/linux-gcc-debug/pvs_report.log ]; then
             plog-converter -t tasklist -o build/linux-gcc-debug/static-analysis/pvs_report.tasklist.txt build/linux-gcc-debug/pvs_report.log || true
             plog-converter -t fullhtml -o build/linux-gcc-debug/static-analysis/pvs_html build/linux-gcc-debug/pvs_report.log || true
+          fi
+
+      - name: Print PVS reports to job output
+        run: |
+          if [ -f build/linux-gcc-debug/static-analysis/pvs-skipped.txt ]; then
+            echo "--- PVS skipped ---"
+            cat build/linux-gcc-debug/static-analysis/pvs-skipped.txt
+          fi
+
+          echo "--- PVS raw report log ---"
+          if [ -f build/linux-gcc-debug/pvs_report.log ]; then
+            cat build/linux-gcc-debug/pvs_report.log
+          else
+            echo "pvs_report.log not found"
+          fi
+          
+          echo "--- PVS report json ---"
+          if [ -f build/linux-gcc-debug/pvs_report.json ]; then
+            cat build/linux-gcc-debug/pvs_report.json
+          else
+            echo "pvs_report.json not found"
+          fi
+
+          echo "--- PVS tasklist report ---"
+          if [ -f build/linux-gcc-debug/static-analysis/pvs_report.tasklist.txt ]; then
+            cat build/linux-gcc-debug/static-analysis/pvs_report.tasklist.txt
+          else
+            echo "pvs_report.tasklist.txt not found"
           fi
 
       - name: Upload PVS artifacts
