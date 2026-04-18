@@ -54,6 +54,35 @@ jobs:
       - name: Test
         run: ctest --preset ${{ matrix.test }}
 
+  docs-linux:
+    name: "Docs · linux-gcc-debug"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build doxygen
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Inject docs run metadata into mainpage
+        run: |
+          export UTC_NOW="$(date -u +"%Y-%m-%d %H:%M:%SZ")"
+          python3 .github/workflows/inject_docs_metadata.py --mainpage docs/mainpage.md
+      - name: Configure
+        run: cmake --preset linux-gcc-debug
+      - name: Build Doxygen docs
+        run: cmake --build --preset linux-gcc-debug --target docs
+      - name: Upload Doxygen HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: doxygen-html-${{ github.run_number }}
+          path: build/linux-gcc-debug/docs/html
+          if-no-files-found: error
+          retention-days: 14
+
   test-macos:
     name: "Test · ${{ matrix.preset }}"
     runs-on: macos-latest
