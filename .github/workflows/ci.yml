@@ -256,6 +256,53 @@ jobs:
           MallocStackLogging=1 leaks --atExit -- "./build/${{ matrix.configure }}/test/${TEST_EXE_NAME}"
 
   # ───────────────────────────────────────────────────────────────────────────
+  # Stage 3.5: PVS-Studio static analysis (Linux only)
+  # ───────────────────────────────────────────────────────────────────────────
+  pvs-linux:
+    name: "PVS-Studio · linux-gcc-debug"
+    needs: test-linux
+    runs-on: ubuntu-latest
+    if: ${{ secrets.PVS_STUDIO_LICENSE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build wget gnupg
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Install PVS-Studio
+        run: |
+          wget -q -O - https://files.pvs-studio.com/etc/pubkey.txt | sudo apt-key add -
+          sudo wget -q -O /etc/apt/sources.list.d/viva64.list https://files.pvs-studio.com/etc/viva64.list
+          sudo apt-get update
+          sudo apt-get install -y pvs-studio
+      - name: Configure PVS-Studio license
+        env:
+          PVS_STUDIO_LICENSE: ${{ secrets.PVS_STUDIO_LICENSE }}
+        run: |
+          mkdir -p "$HOME/.config/PVS-Studio"
+          printf '%s\n' "$PVS_STUDIO_LICENSE" > "$HOME/.config/PVS-Studio/PVS-Studio.lic"
+          chmod 600 "$HOME/.config/PVS-Studio/PVS-Studio.lic"
+      - name: Configure
+        run: cmake --preset linux-gcc-debug
+      - name: Build
+        run: cmake --build --preset linux-gcc-debug
+      - name: Run PVS-Studio analysis target
+        run: cmake --build --preset linux-gcc-debug --target pvs_analysis
+      - name: Upload PVS-Studio report artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pvs-studio-linux-gcc-${{ github.run_number }}
+          path: |
+            build/linux-gcc-debug/pvs_report.log
+            build/linux-gcc-debug/pvs_report.json
+          if-no-files-found: error
+          retention-days: 14
+
+  # ───────────────────────────────────────────────────────────────────────────
   # Stage 4: Sanitizer tests
   # ───────────────────────────────────────────────────────────────────────────
   sanitizers-linux:
