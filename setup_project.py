@@ -59,6 +59,7 @@ class ProjectRenamer:
     # Files to perform text replacements in (relative to project root).
     _TEXT_FILES = (
         "CMakeLists.txt",
+        "sonar-project.properties",
         "src/CMakeLists.txt",
         "apps/CMakeLists.txt",
         "test/CMakeLists.txt",
@@ -96,6 +97,7 @@ class ProjectRenamer:
             ("MYPROJECT_BUILD_TESTING", f"{upper}_BUILD_TESTING"),
             ("MyProjectTest",          f"{pascal}Test"),
             ("MyProject",              pascal),
+            ("cpp-project-template",   snake),
             ("myproject_library",      f"{snake}_library"),
             ("myproject_test",         f"{snake}_test"),
             ("myproject.hpp",          f"{snake}.hpp"),
