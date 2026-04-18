@@ -286,6 +286,8 @@ jobs:
             --project=build/linux-gcc-debug/compile_commands.json \
             --enable=all \
             --inconclusive \
+            --suppress=missingIncludeSystem \
+            --suppress=checkersReport \
             --xml \
             --xml-version=2 \
             --output-file=build/linux-gcc-debug/static-analysis/cppcheck.xml \
@@ -296,6 +298,8 @@ jobs:
             --project=build/linux-gcc-debug/compile_commands.json \
             --enable=all \
             --inconclusive \
+            --suppress=missingIncludeSystem \
+            --suppress=checkersReport \
             --template=gcc \
             2> build/linux-gcc-debug/static-analysis/cppcheck.txt
 
@@ -437,6 +441,20 @@ jobs:
           else
             echo "report-task.txt not found; check Sonar action logs." >> "$SONAR_REPORT"
           fi
+
+      - name: Print Sonar summary to job output
+        run: |
+          SONAR_REPORT=build/linux-gcc-debug/static-analysis/sonar/sonar-summary.txt
+          echo "--- Sonar summary artifact content ---"
+          cat "$SONAR_REPORT"
+
+          {
+            echo "## SonarCloud summary"
+            echo "- Artifact: static-analysis-sonar-${{ github.run_number }}"
+            echo "- File: build/linux-gcc-debug/static-analysis/sonar/sonar-summary.txt"
+            echo ""
+            echo "\`report-task.txt\` includes the Sonar dashboard URL and CE task URL."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Sonar artifacts
         uses: actions/upload-artifact@v4
