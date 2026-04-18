@@ -333,9 +333,6 @@ jobs:
           pip install conan
           conan profile detect
 
-          cmake --preset linux-gcc-debug
-          cmake --build --preset linux-gcc-debug
-
           wget -q -O - https://files.pvs-studio.com/etc/pubkey.txt | sudo apt-key add -
           sudo wget -q -O /etc/apt/sources.list.d/viva64.list https://files.pvs-studio.com/etc/viva64.list
           sudo apt-get update
@@ -344,6 +341,10 @@ jobs:
           mkdir -p "$HOME/.config/PVS-Studio"
           printf '%s\n' "$PVS_STUDIO_LICENSE" > "$HOME/.config/PVS-Studio/PVS-Studio.lic"
           chmod 600 "$HOME/.config/PVS-Studio/PVS-Studio.lic"
+
+          # Configure after PVS installation so CMake can add the pvs_analysis target.
+          cmake --preset linux-gcc-debug
+          cmake --build --preset linux-gcc-debug
 
           cmake --build --preset linux-gcc-debug --target pvs_analysis
 
@@ -410,8 +411,8 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
+          # Use build-wrapper mode only; CFamily forbids setting compile-commands simultaneously.
           args: >
-            --define sonar.cfamily.compile-commands=${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json
             --define sonar.cfamily.build-wrapper-output=${{ env.BUILD_WRAPPER_OUT_DIR }}
 
       - name: Build human-readable Sonar report
