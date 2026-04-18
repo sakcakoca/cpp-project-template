@@ -67,10 +67,6 @@ jobs:
         run: |
           pip install conan
           conan profile detect
-      - name: Inject docs run metadata into mainpage
-        run: |
-          export UTC_NOW="$(date -u +"%Y-%m-%d %H:%M:%SZ")"
-          python3 .github/workflows/inject_docs_metadata.py --mainpage docs/mainpage.md
       - name: Configure
         run: cmake --preset linux-gcc-debug
       - name: Build Doxygen docs
