@@ -5,8 +5,8 @@
 #   1. test          — plain tests (no sanitizers, all platforms)
 #   2. valgrind      — plain debug builds + ctest memcheck (Linux only)
 #   3. leaks         — plain debug builds + leaks check (macOS only)
-#   4. static-analysis — PVS-Studio + cppcheck + Sonar C++ (Linux only)
-#   5. sanitizers    — sanitizer-enabled tests (platform-dependent)
+#   4. sanitizers    — sanitizer-enabled tests (platform-dependent)
+#   5. static-analysis — PVS-Studio + cppcheck + Sonar C++ (Linux only)
 # ─────────────────────────────────────────────────────────────────────────────
 name: CI
 
@@ -257,217 +257,7 @@ jobs:
           MallocStackLogging=1 leaks --atExit -- "./build/${{ matrix.configure }}/test/${TEST_EXE_NAME}"
 
   # ───────────────────────────────────────────────────────────────────────────
-  # Stage 3.5: Static analysis (Linux only)
-  # ───────────────────────────────────────────────────────────────────────────
-  static-analysis-cppcheck-linux:
-    name: "Static Analysis · cppcheck"
-    needs: test-linux
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install system packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build cppcheck
-      - name: Install Conan
-        run: |
-          pip install conan
-          conan profile detect
-      - name: Configure
-        run: cmake --preset linux-gcc-debug
-      - name: Build
-        run: cmake --build --preset linux-gcc-debug
-      - name: Run cppcheck
-        run: |
-          mkdir -p build/linux-gcc-debug/static-analysis
-
-          # Machine-readable report
-          cppcheck \
-            --project=build/linux-gcc-debug/compile_commands.json \
-            --enable=all \
-            --inconclusive \
-            --suppress=missingIncludeSystem \
-            --suppress=checkersReport \
-            --xml \
-            --xml-version=2 \
-            --output-file=build/linux-gcc-debug/static-analysis/cppcheck.xml \
-            2> build/linux-gcc-debug/static-analysis/cppcheck.stderr.txt
-
-          # Human-readable report
-          cppcheck \
-            --project=build/linux-gcc-debug/compile_commands.json \
-            --enable=all \
-            --inconclusive \
-            --suppress=missingIncludeSystem \
-            --suppress=checkersReport \
-            --template=gcc \
-            2> build/linux-gcc-debug/static-analysis/cppcheck.txt
-
-      - name: Upload cppcheck artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: static-analysis-cppcheck-${{ github.run_number }}
-          path: |
-            build/linux-gcc-debug/static-analysis/cppcheck.xml
-            build/linux-gcc-debug/static-analysis/cppcheck.stderr.txt
-            build/linux-gcc-debug/static-analysis/cppcheck.txt
-          if-no-files-found: error
-          retention-days: 14
-
-  static-analysis-pvs-linux:
-    name: "Static Analysis · PVS-Studio"
-    needs: test-linux
-    runs-on: ubuntu-latest
-    env:
-      PVS_STUDIO_LICENSE: ${{ secrets.PVS_STUDIO_LICENSE }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run optional PVS-Studio
-        run: |
-          mkdir -p build/linux-gcc-debug/static-analysis
-
-          if [ -z "$PVS_STUDIO_LICENSE" ]; then
-            echo "PVS_STUDIO_LICENSE is not set; skipping PVS-Studio." > build/linux-gcc-debug/static-analysis/pvs-skipped.txt
-            exit 0
-          fi
-
-          sudo apt-get update
-          sudo apt-get install -y ninja-build wget gnupg
-
-          pip install conan
-          conan profile detect
-
-          wget -q -O - https://files.pvs-studio.com/etc/pubkey.txt | sudo apt-key add -
-          sudo wget -q -O /etc/apt/sources.list.d/viva64.list https://files.pvs-studio.com/etc/viva64.list
-          sudo apt-get update
-          sudo apt-get install -y pvs-studio
-
-          mkdir -p "$HOME/.config/PVS-Studio"
-          printf '%s\n' "$PVS_STUDIO_LICENSE" > "$HOME/.config/PVS-Studio/PVS-Studio.lic"
-          chmod 600 "$HOME/.config/PVS-Studio/PVS-Studio.lic"
-
-          # Configure after PVS installation so CMake can add the pvs_analysis target.
-          cmake --preset linux-gcc-debug
-          cmake --build --preset linux-gcc-debug
-
-          cmake --build --preset linux-gcc-debug --target pvs_analysis
-
-          if [ -f build/linux-gcc-debug/pvs_report.log ]; then
-            plog-converter -t tasklist -o build/linux-gcc-debug/static-analysis/pvs_report.tasklist.txt build/linux-gcc-debug/pvs_report.log || true
-            plog-converter -t fullhtml -o build/linux-gcc-debug/static-analysis/pvs_html build/linux-gcc-debug/pvs_report.log || true
-          fi
-
-      - name: Upload PVS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: static-analysis-pvs-${{ github.run_number }}
-          path: |
-            build/linux-gcc-debug/static-analysis/pvs-skipped.txt
-            build/linux-gcc-debug/pvs_report.log
-            build/linux-gcc-debug/pvs_report.json
-            build/linux-gcc-debug/static-analysis/pvs_report.tasklist.txt
-            build/linux-gcc-debug/static-analysis/pvs_html
-          if-no-files-found: ignore
-          retention-days: 14
-
-  static-analysis-sonar-linux:
-    name: "Static Analysis · SonarCloud"
-    needs: test-linux
-    runs-on: ubuntu-latest
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      BUILD_WRAPPER_OUT_DIR: build/linux-gcc-debug/static-analysis/sonar/build-wrapper
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Prepare Sonar build prerequisites
-        run: |
-          mkdir -p build/linux-gcc-debug/static-analysis/sonar
-
-          if [ -z "$SONAR_TOKEN" ]; then
-            echo "SONAR_TOKEN is not set; skipping Sonar." > build/linux-gcc-debug/static-analysis/sonar/sonar-skipped.txt
-            exit 0
-          fi
-
-          sudo apt-get update
-          sudo apt-get install -y ninja-build
-
-          pip install conan
-          conan profile detect
-
-          cmake --preset linux-gcc-debug
-
-      - name: Install Build Wrapper
-        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
-
-      - name: Run Build Wrapper
-        run: |
-          build-wrapper-linux-x86-64 --out-dir "${{ env.BUILD_WRAPPER_OUT_DIR }}" \
-            cmake --build --preset linux-gcc-debug --target all
-
-          # Keep a compile_commands copy next to build-wrapper data for easier debugging.
-          cp build/linux-gcc-debug/compile_commands.json "${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
-
-      - name: SonarQube Cloud Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          # Use build-wrapper mode only; CFamily forbids setting compile-commands simultaneously.
-          args: >
-            --define sonar.cfamily.build-wrapper-output=${{ env.BUILD_WRAPPER_OUT_DIR }}
-
-      - name: Build human-readable Sonar report
-        run: |
-          mkdir -p build/linux-gcc-debug/static-analysis/sonar
-          SONAR_REPORT=build/linux-gcc-debug/static-analysis/sonar/sonar-summary.txt
-
-          if [ -f build/linux-gcc-debug/static-analysis/sonar/sonar-skipped.txt ]; then
-            cat build/linux-gcc-debug/static-analysis/sonar/sonar-skipped.txt > "$SONAR_REPORT"
-            exit 0
-          fi
-
-          {
-            echo "SonarCloud analysis summary"
-            echo "project_key=sakcakoca_cpp-project-template"
-            echo "organization=sakcakoca"
-            echo ""
-          } > "$SONAR_REPORT"
-
-          if [ -f .scannerwork/report-task.txt ]; then
-            cat .scannerwork/report-task.txt >> "$SONAR_REPORT"
-          else
-            echo "report-task.txt not found; check Sonar action logs." >> "$SONAR_REPORT"
-          fi
-
-      - name: Print Sonar summary to job output
-        run: |
-          SONAR_REPORT=build/linux-gcc-debug/static-analysis/sonar/sonar-summary.txt
-          echo "--- Sonar summary artifact content ---"
-          cat "$SONAR_REPORT"
-
-          {
-            echo "## SonarCloud summary"
-            echo "- Artifact: static-analysis-sonar-${{ github.run_number }}"
-            echo "- File: build/linux-gcc-debug/static-analysis/sonar/sonar-summary.txt"
-            echo ""
-            echo "\`report-task.txt\` includes the Sonar dashboard URL and CE task URL."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload Sonar artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: static-analysis-sonar-${{ github.run_number }}
-          path: |
-            build/linux-gcc-debug/static-analysis/sonar
-            .scannerwork/report-task.txt
-          if-no-files-found: ignore
-          retention-days: 14
-
-  # ───────────────────────────────────────────────────────────────────────────
-  # Stage 5: Sanitizer tests
+  # Stage 4: Sanitizer tests
   # ───────────────────────────────────────────────────────────────────────────
   sanitizers-linux:
     name: "Sanitizer · ${{ matrix.test }}"
@@ -608,3 +398,236 @@ jobs:
         run: cmake --build --preset win-msvc-debug-asan
       - name: Test
         run: ctest --preset win-msvc-test-asan
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Stage 5: Static analysis (Linux only)
+  # ───────────────────────────────────────────────────────────────────────────
+  static-analysis-cppcheck-linux:
+    name: "Static Analysis · cppcheck"
+    needs: test-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cppcheck
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Configure
+        run: cmake --preset linux-gcc-debug
+      - name: Build
+        run: cmake --build --preset linux-gcc-debug
+      - name: Run cppcheck
+        run: |
+          mkdir -p build/linux-gcc-debug/static-analysis
+
+          # Machine-readable report
+          cppcheck \
+            --project=build/linux-gcc-debug/compile_commands.json \
+            --enable=all \
+            --inconclusive \
+            --suppress=missingIncludeSystem \
+            --suppress=checkersReport \
+            --xml \
+            --xml-version=2 \
+            --output-file=build/linux-gcc-debug/static-analysis/cppcheck.xml \
+            2> build/linux-gcc-debug/static-analysis/cppcheck.stderr.txt
+
+          # Human-readable report
+          cppcheck \
+            --project=build/linux-gcc-debug/compile_commands.json \
+            --enable=all \
+            --inconclusive \
+            --suppress=missingIncludeSystem \
+            --suppress=checkersReport \
+            --template=gcc \
+            2> build/linux-gcc-debug/static-analysis/cppcheck.txt
+
+      - name: Upload cppcheck artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-cppcheck-${{ github.run_number }}
+          path: |
+            build/linux-gcc-debug/static-analysis/cppcheck.xml
+            build/linux-gcc-debug/static-analysis/cppcheck.stderr.txt
+            build/linux-gcc-debug/static-analysis/cppcheck.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  static-analysis-pvs-linux:
+    name: "Static Analysis · PVS-Studio"
+    needs: test-linux
+    runs-on: ubuntu-latest
+    env:
+      PVS_STUDIO_LICENSE: ${{ secrets.PVS_STUDIO_LICENSE }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare PVS output directory
+        run: |
+          mkdir -p build/linux-gcc-debug/static-analysis
+
+      - name: Check PVS license
+        id: pvs-license
+        run: |
+          if [ -z "$PVS_STUDIO_LICENSE" ]; then
+            echo "PVS_STUDIO_LICENSE is not set; skipping PVS-Studio." > build/linux-gcc-debug/static-analysis/pvs-skipped.txt
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install system packages
+        if: steps.pvs-license.outputs.skip != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build wget gnupg
+
+      - name: Install Conan
+        if: steps.pvs-license.outputs.skip != 'true'
+        run: |
+          pip install conan
+          conan profile detect
+
+      - name: Install PVS-Studio
+        if: steps.pvs-license.outputs.skip != 'true'
+        run: |
+          wget -q -O - https://files.pvs-studio.com/etc/pubkey.txt | sudo apt-key add -
+          sudo wget -q -O /etc/apt/sources.list.d/viva64.list https://files.pvs-studio.com/etc/viva64.list
+          sudo apt-get update
+          sudo apt-get install -y pvs-studio
+
+      - name: Configure PVS-Studio license
+        if: steps.pvs-license.outputs.skip != 'true'
+        run: |
+          mkdir -p "$HOME/.config/PVS-Studio"
+          printf '%s\n' "$PVS_STUDIO_LICENSE" > "$HOME/.config/PVS-Studio/PVS-Studio.lic"
+          chmod 600 "$HOME/.config/PVS-Studio/PVS-Studio.lic"
+
+      - name: Configure CMake
+        if: steps.pvs-license.outputs.skip != 'true'
+        run: |
+          # Configure after PVS installation so CMake can add the pvs_analysis target.
+          cmake --preset linux-gcc-debug
+
+      - name: Build
+        if: steps.pvs-license.outputs.skip != 'true'
+        run: |
+          cmake --build --preset linux-gcc-debug
+
+      - name: Run pvs_analysis target
+        if: steps.pvs-license.outputs.skip != 'true'
+        run: |
+          cmake --build --preset linux-gcc-debug --target pvs_analysis
+
+      - name: Convert PVS report
+        if: steps.pvs-license.outputs.skip != 'true'
+        run: |
+          if [ -f build/linux-gcc-debug/pvs_report.log ]; then
+            plog-converter -t tasklist -o build/linux-gcc-debug/static-analysis/pvs_report.tasklist.txt build/linux-gcc-debug/pvs_report.log || true
+            plog-converter -t fullhtml -o build/linux-gcc-debug/static-analysis/pvs_html build/linux-gcc-debug/pvs_report.log || true
+          fi
+
+      - name: Upload PVS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-pvs-${{ github.run_number }}
+          path: |
+            build/linux-gcc-debug/static-analysis/pvs-skipped.txt
+            build/linux-gcc-debug/pvs_report.log
+            build/linux-gcc-debug/pvs_report.json
+            build/linux-gcc-debug/static-analysis/pvs_report.tasklist.txt
+            build/linux-gcc-debug/static-analysis/pvs_html
+          if-no-files-found: ignore
+          retention-days: 14
+
+  static-analysis-sonar-linux:
+    name: "Static Analysis · SonarCloud"
+    needs: test-linux
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      BUILD_WRAPPER_OUT_DIR: build/linux-gcc-debug/static-analysis/sonar/build-wrapper
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare Sonar build prerequisites
+        run: |
+          mkdir -p build/linux-gcc-debug/static-analysis/sonar
+
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "SONAR_TOKEN is not set; skipping Sonar." > build/linux-gcc-debug/static-analysis/sonar/sonar-skipped.txt
+            exit 0
+          fi
+
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+          pip install conan
+          conan profile detect
+
+          cmake --preset linux-gcc-debug
+
+      - name: Install Build Wrapper
+        uses: SonarSource/sonarqube-scan-action/install-build-wrapper@v6
+
+      - name: Run Build Wrapper
+        run: |
+          build-wrapper-linux-x86-64 --out-dir "${{ env.BUILD_WRAPPER_OUT_DIR }}" \
+            cmake --build --preset linux-gcc-debug --target all
+
+          # Keep a compile_commands copy next to build-wrapper data for easier debugging.
+          cp build/linux-gcc-debug/compile_commands.json "${{ env.BUILD_WRAPPER_OUT_DIR }}/compile_commands.json"
+
+      - name: SonarQube Cloud Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          # Use build-wrapper mode only; CFamily forbids setting compile-commands simultaneously.
+          args: >
+            --define sonar.cfamily.build-wrapper-output=${{ env.BUILD_WRAPPER_OUT_DIR }}
+
+      - name: Build human-readable Sonar report
+        run: |
+          mkdir -p build/linux-gcc-debug/static-analysis/sonar
+          SONAR_REPORT=build/linux-gcc-debug/static-analysis/sonar/sonar-summary.txt
+
+          if [ -f build/linux-gcc-debug/static-analysis/sonar/sonar-skipped.txt ]; then
+            cat build/linux-gcc-debug/static-analysis/sonar/sonar-skipped.txt > "$SONAR_REPORT"
+            exit 0
+          fi
+
+          if [ -f .scannerwork/report-task.txt ]; then
+            cat .scannerwork/report-task.txt >> "$SONAR_REPORT"
+          else
+            echo "report-task.txt not found; check Sonar action logs." >> "$SONAR_REPORT"
+          fi
+
+      - name: Print Sonar summary to job output
+        run: |
+          SONAR_REPORT=build/linux-gcc-debug/static-analysis/sonar/sonar-summary.txt
+          echo "--- Sonar summary artifact content ---"
+          cat "$SONAR_REPORT"
+
+          {
+            echo "## SonarCloud summary"
+            echo "- Artifact: static-analysis-sonar-${{ github.run_number }}"
+            echo "- File: build/linux-gcc-debug/static-analysis/sonar/sonar-summary.txt"
+            echo ""
+            echo "\`report-task.txt\` includes the Sonar dashboard URL and CE task URL."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Sonar artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-sonar-${{ github.run_number }}
+          path: |
+            build/linux-gcc-debug/static-analysis/sonar
+            .scannerwork/report-task.txt
+          if-no-files-found: ignore
+          retention-days: 14
