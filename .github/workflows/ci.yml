@@ -258,11 +258,28 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────
   # Stage 3.5: PVS-Studio static analysis (Linux only)
   # ───────────────────────────────────────────────────────────────────────────
+  pvs-secret-check:
+    name: "PVS secret check"
+    runs-on: ubuntu-latest
+    outputs:
+      has_pvs_license: ${{ steps.check.outputs.has_pvs_license }}
+    steps:
+      - id: check
+        env:
+          PVS_STUDIO_LICENSE: ${{ secrets.PVS_STUDIO_LICENSE }}
+        run: |
+          if [ -n "$PVS_STUDIO_LICENSE" ]; then
+            echo "has_pvs_license=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_pvs_license=false" >> "$GITHUB_OUTPUT"
+            echo "PVS_STUDIO_LICENSE is not set; skipping PVS job."
+          fi
+
   pvs-linux:
     name: "PVS-Studio · linux-gcc-debug"
-    needs: test-linux
+    needs: [test-linux, pvs-secret-check]
     runs-on: ubuntu-latest
-    if: ${{ secrets.PVS_STUDIO_LICENSE != '' }}
+    if: ${{ needs.pvs-secret-check.outputs.has_pvs_license == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install system packages
