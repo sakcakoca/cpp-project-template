@@ -42,8 +42,6 @@ register_alternative gcov-tool "/usr/bin/gcov-tool-${GCC_MAJOR}"
 register_alternative gcc-ar "/usr/bin/gcc-ar-${GCC_MAJOR}"
 register_alternative gcc-nm "/usr/bin/gcc-nm-${GCC_MAJOR}"
 register_alternative gcc-ranlib "/usr/bin/gcc-ranlib-${GCC_MAJOR}"
-register_alternative lcov "/usr/bin/lcov"
-register_alternative genhtml "/usr/bin/genhtml"
 
 
 echo "Configured GCC toolchain:"
