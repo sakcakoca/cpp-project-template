@@ -93,8 +93,7 @@ jobs:
           ROOT_DIR=$(pwd)
           RAW_COVERAGE_INFO="$COVERAGE_DIR/coverage.raw.info"
           FILTERED_COVERAGE_INFO="$COVERAGE_DIR/coverage.info"
-          GCC_MAJOR=$(gcc -dumpfullversion | cut -d. -f1)
-          GCOV_TOOL=$(command -v "gcov-${GCC_MAJOR}" || command -v gcov)
+          GCOV_TOOL=$(command -v "gcov-${{ env.GCC_VERSION }}" || command -v gcov)
 
           mkdir -p "$COVERAGE_DIR"
 
