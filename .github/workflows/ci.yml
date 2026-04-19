@@ -55,6 +55,39 @@ jobs:
       - name: Test
         run: ctest --preset ${{ matrix.test }}
 
+  test-linux-coverage:
+    name: "Coverage · linux-gcc"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build lcov
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect
+      - name: Configure
+        run: cmake --preset linux-gcc-debug -DENABLE_COVERAGE=ON
+      - name: Build
+        run: cmake --build --preset linux-gcc-debug
+      - name: Test
+        run: ctest --preset linux-gcc-test
+      - name: Generate coverage HTML report
+        run: |
+          COVERAGE_DIR=build/linux-gcc-debug/coverage
+          mkdir -p "$COVERAGE_DIR"
+          lcov --capture --directory build/linux-gcc-debug --output-file "$COVERAGE_DIR/coverage.info"
+          genhtml "$COVERAGE_DIR/coverage.info" --output-directory "$COVERAGE_DIR/html"
+      - name: Upload coverage HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-linux-gcc-${{ github.run_number }}
+          path: build/linux-gcc-debug/coverage/html
+          if-no-files-found: error
+          retention-days: 14
+
   docs-linux:
     name: "Docs · linux-gcc-debug"
     runs-on: ubuntu-latest

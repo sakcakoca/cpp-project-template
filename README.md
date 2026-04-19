@@ -236,6 +236,9 @@ cmake --build --preset linux-gcc-debug --target pvs_analysis
 
 The JSON report is written to `build/<preset>/pvs_report.json`.
 
+For CI setup (license secret and workflow prerequisites), see
+[`Static Analysis Pipeline (CI)`](#static-analysis-pipeline-ci).
+
 ---
 
 ## Code Coverage (GCC/Clang, not MSVC)
@@ -331,10 +334,97 @@ Three pipeline configurations are included — all pre-configured and ready to u
 
 | File | Platform | What it tests |
 |------|----------|---------------|
-| `.github/workflows/ci.yml` | Linux, macOS, Windows | Tests, Valgrind, Leaks, Sanitizers |
+| `.github/workflows/ci.yml` | Linux, macOS, Windows | Tests, Docs, Coverage, Valgrind, Leaks, Sanitizers, Static Analysis |
 
 No changes needed in pipeline files for a new project — they use the same CMake
 presets.
+
+### CI Artifacts
+
+`ci.yml` uploads human-readable artifacts for documentation, coverage, and static analysis.
+
+| Job name (`.github/workflows/ci.yml`) | Actions UI name | Artifact name pattern | Main content |
+|------|------|------|------|
+| `docs-linux` | `Docs · linux-gcc-debug` | `doxygen-html-${{ github.run_number }}` | Doxygen HTML site (`docs/html/index.html`) |
+| `test-linux-coverage` | `Coverage · linux-gcc` | `coverage-html-linux-gcc-${{ github.run_number }}` | Coverage HTML site (`coverage/html/index.html`) |
+| `static-analysis-cppcheck-linux` | `Static Analysis · cppcheck` | `static-analysis-cppcheck-${{ github.run_number }}` | `cppcheck.xml`, `cppcheck.txt`, `cppcheck.stderr.txt` |
+| `static-analysis-pvs-linux` | `Static Analysis · PVS-Studio` | `static-analysis-pvs-${{ github.run_number }}` | PVS log/json + converted reports |
+| `static-analysis-sonar-linux` | `Static Analysis · SonarCloud` | `static-analysis-sonar-${{ github.run_number }}` | Sonar summary + `report-task.txt` |
+
+### Static Analysis Pipeline (CI)
+
+`ci.yml` includes three Linux static analysis jobs under Stage 5:
+
+| Job name (`.github/workflows/ci.yml`) | Tool | Purpose | Artifact(s) |
+|------|------|---------|-------------|
+| `static-analysis-cppcheck-linux` | cppcheck | Runs `cppcheck` against `compile_commands.json` | `cppcheck.xml`, `cppcheck.txt`, `cppcheck.stderr.txt` |
+| `static-analysis-pvs-linux` | PVS-Studio | Runs `pvs_analysis` target when license is provided | `pvs_report.log`, `pvs_report.json`, tasklist/html outputs |
+| `static-analysis-sonar-linux` | SonarCloud C/C++ | Runs Sonar build-wrapper + scan | `sonar-summary.txt`, `.scannerwork/report-task.txt` |
+
+If `PVS_STUDIO_LICENSE` or `SONAR_TOKEN` is missing, the corresponding job is skipped gracefully and writes a `*-skipped.txt` note.
+
+#### PVS-Studio CI setup (`PVS_STUDIO_LICENSE`)
+
+1. Generate `PVS-Studio.lic` with the official analyzer command flow (Linux example):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y wget gnupg
+wget -q -O - https://files.pvs-studio.com/etc/pubkey.txt | sudo apt-key add -
+sudo wget -q -O /etc/apt/sources.list.d/viva64.list https://files.pvs-studio.com/etc/viva64.list
+sudo apt-get update
+sudo apt-get install -y pvs-studio
+
+# Create/update ~/.config/PVS-Studio/PVS-Studio.lic
+pvs-studio-analyzer credentials "YOUR_PVS_USER_NAME" "YOUR_PVS_LICENSE_KEY"
+
+# Verify generated license file content
+cat "$HOME/.config/PVS-Studio/PVS-Studio.lic"
+```
+
+2. Add the same license content as a GitHub Actions repository secret:
+   - Open your repository on GitHub.
+   - Go to `Settings` -> `Secrets and variables` -> `Actions`.
+   - Click `New repository secret`.
+   - Name: `PVS_STUDIO_LICENSE`
+   - Value: paste the full `.lic` file content.
+   - Click `Add secret`.
+3. Trigger CI (`push`, `pull_request`, or `workflow_dispatch`) and verify `Static Analysis · PVS-Studio` runs instead of skip.
+
+Notes:
+- `pvs-studio-analyzer` is the correct CLI for credentials activation (not `pvs-analyzer`).
+- Do not commit `PVS-Studio.lic` into the repository.
+- The workflow writes this secret into `$HOME/.config/PVS-Studio/PVS-Studio.lic` on the runner.
+
+#### SonarCloud CI setup (`SONAR_TOKEN`)
+
+1. Create/import the project in SonarCloud:
+   - Go to [https://sonarcloud.io](https://sonarcloud.io).
+   - Sign in with GitHub.
+   - Click `+` -> `Analyze new project`.
+   - Select your GitHub organization/account and this repository.
+   - Complete onboarding.
+2. Update `sonar-project.properties` in this repo:
+   - Set `sonar.projectKey` to the project key shown in SonarCloud.
+   - Set `sonar.organization` to your SonarCloud organization key.
+   - Keep `sonar.sources`, `sonar.tests`, and exclusions aligned with your layout.
+3. Create a Sonar token:
+   - In SonarCloud, open your avatar menu -> `My Account` -> `Security`.
+   - Under tokens, generate a token (for example: `github-actions-ci`).
+   - Copy the token value.
+4. Add token as GitHub secret:
+   - GitHub repository -> `Settings` -> `Secrets and variables` -> `Actions`.
+   - `New repository secret`
+   - Name: `SONAR_TOKEN`
+   - Value: paste the generated Sonar token.
+5. Run CI and check `Static Analysis · SonarCloud`; use `.scannerwork/report-task.txt` (uploaded artifact) to open the Sonar dashboard/analysis task URL.
+
+#### Quick validation checklist
+
+- `sonar-project.properties` has correct `sonar.projectKey` and `sonar.organization`.
+- GitHub secrets `PVS_STUDIO_LICENSE` and `SONAR_TOKEN` exist.
+- Stage 5 jobs in `.github/workflows/ci.yml` are green on Linux.
+- Static analysis artifacts are downloadable from the workflow run.
 
 ---
 
