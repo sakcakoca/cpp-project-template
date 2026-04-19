@@ -17,6 +17,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  GCC_VERSION: "15"
+  CLANG_VERSION: "22"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1: Plain tests (no sanitizers)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -32,18 +36,24 @@ jobs:
             configure: linux-gcc-debug
             build: linux-gcc-debug
             test: linux-gcc-test
-            packages: ""
+            compiler: gcc
           - preset: linux-clang
             configure: linux-clang-debug
             build: linux-clang-debug
             test: linux-clang-test
-            packages: clang
+            compiler: clang
     steps:
       - uses: actions/checkout@v4
-      - name: Install system packages
+      - name: Install compiler toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build ${{ matrix.packages }}
+          sudo apt-get install -y ninja-build wget gnupg lsb-release software-properties-common
+
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            bash .github/workflows/install_gcc.sh "${{ env.GCC_VERSION }}"
+          else
+            bash .github/workflows/install_llvm.sh "${{ env.CLANG_VERSION }}"
+          fi
       - name: Install Conan
         run: |
           pip install conan
@@ -63,18 +73,8 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          LATEST_GCC_MAJOR=$(apt-cache search '^gcc-[0-9]+$' | sed -E 's/^gcc-([0-9]+).*$/\1/' | sort -n | tail -1)
-          if [ -z "$LATEST_GCC_MAJOR" ]; then
-            echo "Failed to resolve latest GCC major version from apt-cache."
-            exit 1
-          fi
-          sudo apt-get install -y ninja-build lcov gcc-"$LATEST_GCC_MAJOR" g++-"$LATEST_GCC_MAJOR"
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"$LATEST_GCC_MAJOR" 100
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-"$LATEST_GCC_MAJOR" 100
-          sudo update-alternatives --set gcc /usr/bin/gcc-"$LATEST_GCC_MAJOR"
-          sudo update-alternatives --set g++ /usr/bin/g++-"$LATEST_GCC_MAJOR"
-          echo "Using GCC: $(gcc --version | head -n 1)"
-          echo "Using G++: $(g++ --version | head -n 1)"
+          sudo apt-get install -y ninja-build lcov wget gnupg lsb-release software-properties-common
+          bash .github/workflows/install_gcc.sh "${{ env.GCC_VERSION }}"
       - name: Install Conan
         run: |
           pip install conan
@@ -125,7 +125,8 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build doxygen
+          sudo apt-get install -y ninja-build doxygen wget gnupg lsb-release software-properties-common
+          bash .github/workflows/install_gcc.sh "${{ env.GCC_VERSION }}"
       - name: Install Conan
         run: |
           pip install conan
@@ -257,16 +258,23 @@ jobs:
           - preset: linux-gcc
             configure: linux-gcc-debug
             build: linux-gcc-debug
+            compiler: gcc
           - preset: linux-clang
             configure: linux-clang-debug
             build: linux-clang-debug
-            packages: clang
+            compiler: clang
     steps:
       - uses: actions/checkout@v4
-      - name: Install system packages
+      - name: Install system packages and compiler toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build valgrind ${{ matrix.packages }}
+          sudo apt-get install -y ninja-build valgrind wget gnupg lsb-release software-properties-common
+
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            bash .github/workflows/install_gcc.sh "${{ env.GCC_VERSION }}"
+          else
+            bash .github/workflows/install_llvm.sh "${{ env.CLANG_VERSION }}"
+          fi
       - name: Install Conan
         run: |
           pip install conan
@@ -333,34 +341,40 @@ jobs:
           - configure: linux-gcc-debug-asan
             build: linux-gcc-debug-asan
             test: linux-gcc-test-asan
-            packages: ""
+            compiler: gcc
           - configure: linux-gcc-debug-tsan
             build: linux-gcc-debug-tsan
             test: linux-gcc-test-tsan
-            packages: ""
+            compiler: gcc
           - configure: linux-gcc-debug-lsan
             build: linux-gcc-debug-lsan
             test: linux-gcc-test-lsan
-            packages: ""
+            compiler: gcc
           # Clang sanitizers
           - configure: linux-clang-debug-asan
             build: linux-clang-debug-asan
             test: linux-clang-test-asan
-            packages: clang
+            compiler: clang
           - configure: linux-clang-debug-tsan
             build: linux-clang-debug-tsan
             test: linux-clang-test-tsan
-            packages: clang
+            compiler: clang
           - configure: linux-clang-debug-lsan
             build: linux-clang-debug-lsan
             test: linux-clang-test-lsan
-            packages: clang
+            compiler: clang
     steps:
       - uses: actions/checkout@v4
-      - name: Install system packages
+      - name: Install compiler toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build ${{ matrix.packages }}
+          sudo apt-get install -y ninja-build wget gnupg lsb-release software-properties-common
+
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            bash .github/workflows/install_gcc.sh "${{ env.GCC_VERSION }}"
+          else
+            bash .github/workflows/install_llvm.sh "${{ env.CLANG_VERSION }}"
+          fi
       - name: Install Conan
         run: |
           pip install conan
@@ -473,7 +487,8 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cppcheck
+          sudo apt-get install -y ninja-build cppcheck wget gnupg lsb-release software-properties-common
+          bash .github/workflows/install_gcc.sh "${{ env.GCC_VERSION }}"
       - name: Install Conan
         run: |
           pip install conan
@@ -561,7 +576,8 @@ jobs:
         if: steps.pvs-license.outputs.skip != 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build wget gnupg
+          sudo apt-get install -y ninja-build wget gnupg lsb-release software-properties-common
+          bash .github/workflows/install_gcc.sh "${{ env.GCC_VERSION }}"
 
       - name: Install Conan
         if: steps.pvs-license.outputs.skip != 'true'
@@ -671,7 +687,9 @@ jobs:
           fi
 
           sudo apt-get update
-          sudo apt-get install -y ninja-build
+          sudo apt-get install -y ninja-build wget gnupg lsb-release software-properties-common
+
+          bash .github/workflows/install_gcc.sh "${{ env.GCC_VERSION }}"
 
           pip install conan
           conan profile detect
