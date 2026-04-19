@@ -72,14 +72,28 @@ jobs:
         run: cmake --preset linux-gcc-debug -DENABLE_COVERAGE=ON
       - name: Build
         run: cmake --build --preset linux-gcc-debug
+      - name: Reset coverage counters
+        run: find build/linux-gcc-debug -name '*.gcda' -delete
       - name: Test
         run: ctest --preset linux-gcc-test
       - name: Generate coverage HTML report
         run: |
           COVERAGE_DIR=build/linux-gcc-debug/coverage
+          ROOT_DIR=$(pwd)
+          RAW_COVERAGE_INFO="$COVERAGE_DIR/coverage.raw.info"
+          FILTERED_COVERAGE_INFO="$COVERAGE_DIR/coverage.info"
+          GCOV_TOOL=$(command -v gcov-13 || command -v gcov)
+
           mkdir -p "$COVERAGE_DIR"
-          lcov --capture --directory build/linux-gcc-debug --output-file "$COVERAGE_DIR/coverage.info"
-          genhtml "$COVERAGE_DIR/coverage.info" --output-directory "$COVERAGE_DIR/html"
+
+          # Retry once with mismatch ignore to handle known gcc/lcov debug-line map issues.
+          if ! lcov --capture --directory build/linux-gcc-debug --gcov-tool "$GCOV_TOOL" --output-file "$RAW_COVERAGE_INFO"; then
+            echo "::warning::lcov capture failed; retrying with --ignore-errors mismatch"
+            lcov --capture --directory build/linux-gcc-debug --gcov-tool "$GCOV_TOOL" --ignore-errors mismatch --output-file "$RAW_COVERAGE_INFO"
+          fi
+
+          lcov --extract "$RAW_COVERAGE_INFO" "$ROOT_DIR/src/*" "$ROOT_DIR/include/*" "$ROOT_DIR/apps/*" --output-file "$FILTERED_COVERAGE_INFO"
+          genhtml "$FILTERED_COVERAGE_INFO" --output-directory "$COVERAGE_DIR/html"
       - name: Upload coverage HTML artifact
         uses: actions/upload-artifact@v4
         with:
