@@ -63,7 +63,18 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build lcov gcc-15 g++-15
+          LATEST_GCC_MAJOR=$(apt-cache search '^gcc-[0-9]+$' | sed -E 's/^gcc-([0-9]+).*$/\1/' | sort -n | tail -1)
+          if [ -z "$LATEST_GCC_MAJOR" ]; then
+            echo "Failed to resolve latest GCC major version from apt-cache."
+            exit 1
+          fi
+          sudo apt-get install -y ninja-build lcov gcc-"$LATEST_GCC_MAJOR" g++-"$LATEST_GCC_MAJOR"
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-"$LATEST_GCC_MAJOR" 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-"$LATEST_GCC_MAJOR" 100
+          sudo update-alternatives --set gcc /usr/bin/gcc-"$LATEST_GCC_MAJOR"
+          sudo update-alternatives --set g++ /usr/bin/g++-"$LATEST_GCC_MAJOR"
+          echo "Using GCC: $(gcc --version | head -n 1)"
+          echo "Using G++: $(g++ --version | head -n 1)"
       - name: Install Conan
         run: |
           pip install conan
@@ -82,7 +93,8 @@ jobs:
           ROOT_DIR=$(pwd)
           RAW_COVERAGE_INFO="$COVERAGE_DIR/coverage.raw.info"
           FILTERED_COVERAGE_INFO="$COVERAGE_DIR/coverage.info"
-          GCOV_TOOL=$(command -v gcov-15 || command -v gcov)
+          GCC_MAJOR=$(gcc -dumpfullversion | cut -d. -f1)
+          GCOV_TOOL=$(command -v "gcov-${GCC_MAJOR}" || command -v gcov)
 
           mkdir -p "$COVERAGE_DIR"
 
